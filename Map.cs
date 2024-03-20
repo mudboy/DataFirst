@@ -22,6 +22,18 @@ public static class Map
 public static partial class _
 {
 
+    public static StringMap KeyBy(StringMap map, params string[] path)
+    {
+        var builder = ImmutableDictionary.CreateBuilder<string, object>();
+        map.Aggregate(builder, (b, kvp) =>
+        {
+            var key = Get<string>((StringMap)kvp.Value, path);
+            builder.Add(key, kvp.Value);
+            return builder;
+        });
+        return builder.ToImmutable();
+    }
+    
     public static bool ContainsKey(StringMap map, string key) => map.ContainsKey(key);
 
     public static bool ContainsKey(StringMap map, IEnumerable<string> pathKey)

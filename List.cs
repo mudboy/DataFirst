@@ -8,7 +8,6 @@ public static class List
     {
         return ImmutableList.Create(values);
     }
-
 }
 
 public static partial class _
