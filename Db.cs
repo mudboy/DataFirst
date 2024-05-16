@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Data.Common;
-using StringMap = System.Collections.Immutable.ImmutableDictionary<string, object>;
 
 namespace DataFirst;
 

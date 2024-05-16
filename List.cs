@@ -19,10 +19,10 @@ public static partial class _
     public static ImmutableList<R> Map<T, R>(ImmutableList<T> list, Func<T, R> f) =>
         list.Select(f).ToImmutableList();
 
-    public static ImmutableDictionary<string, object> KeyBy(ImmutableList<ImmutableDictionary<string, object>> maps, string key) =>
+    public static StringMap KeyBy(ImmutableList<StringMap> maps, string key) =>
         maps.Aggregate(ImmutableDictionary.CreateBuilder<string,object>(), (builder, obj) =>
         {
-            builder[_.Get<string>(obj, key)] = obj;
+            builder[_.Get<string>(obj, key)] = (object)obj;
             return builder;
         }).ToImmutable();
 

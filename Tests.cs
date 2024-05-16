@@ -2,8 +2,6 @@
 using FluentAssertions;
 using Xunit;
 
-using StringMap = System.Collections.Immutable.ImmutableDictionary<string, object>;
-
 namespace DataFirst;
 
 public sealed class Tests

@@ -1,6 +1,5 @@
+using System.Collections;
 using System.Collections.Immutable;
-
-using StringMap = System.Collections.Immutable.ImmutableDictionary<string, object>;
 
 namespace DataFirst;
 
@@ -28,8 +27,8 @@ public static partial class _
         map.Aggregate(builder, (b, kvp) =>
         {
             var key = Get<string>((StringMap)kvp.Value, path);
-            builder.Add(key, kvp.Value);
-            return builder;
+            b.Add(key, kvp.Value);
+            return b;
         });
         return builder.ToImmutable();
     }
@@ -61,15 +60,12 @@ public static partial class _
         map.TryGetValue(key, out var value) ? value : fallbackValue ?? "undefined";
 
     public static object Get(StringMap map, IEnumerable<object> keyPath) =>
-        keyPath.Aggregate<object, object>(map, (current, key) =>
+        keyPath.Aggregate<object, object>(map, (current, key) => current switch
         {
-            if (current is StringMap m && key is string k)
-                return Get(m, k);
-            if (current is ImmutableList<object> l && key is int i)
-                return Get(l, i);
-            if (current is ImmutableList<string> ls && key is int y)
-                return Get(ls, y);
-            throw new Exception($"Unknown value type {current.GetType().Name}");
+            StringMap m when key is string k => Get(m, k),
+            ImmutableList<object> l when key is int i => Get(l, i),
+            ImmutableList<string> ls when key is int y => Get(ls, y),
+            _ => throw new Exception($"Unknown value type {current.GetType().Name}")
         });
 
     public static StringMap Set(StringMap map, string key, object value) => map.SetItem(key, value);
@@ -94,7 +90,7 @@ public static partial class _
         string idKey) =>
         _.GroupBy(rows, x => Get<string>(x, idKey));
 
-    public static ImmutableList<V> Values<K,V>(ImmutableDictionary<K, V> map) => map.Values.ToImmutableList();
+    public static ImmutableList<V> Values<K,V>(ImmutableDictionary<K, V> map) where K : notnull => map.Values.ToImmutableList();
 
     public static ImmutableList<object> Values(
         StringMap map) => map.Values.ToImmutableList();
