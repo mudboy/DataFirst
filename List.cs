@@ -22,12 +22,26 @@ public static partial class _
     public static StringMap KeyBy(ImmutableList<StringMap> maps, string key) =>
         maps.Aggregate(ImmutableDictionary.CreateBuilder<string,object>(), (builder, obj) =>
         {
-            builder[_.Get<string>(obj, key)] = (object)obj;
+            builder[Get<string>(obj, key)] = obj;
             return builder;
         }).ToImmutable();
 
-    public static ImmutableList<T> Filter<T>(ImmutableList<T> list, Func<T, bool> predicate)
+    public static ImmutableList<T> Filter<T>(ImmutableList<T> list, Func<T, bool> predicate) 
+        => list.Where(predicate).ToImmutableList();
+    
+    public static ImmutableList<StringMap> AggregateFields(ImmutableList<StringMap> rows, string idFieldName, string fieldName,
+        string aggregateFieldName)
     {
-        return list.Where(predicate).ToImmutableList();
+        var rowsByIdField = _.GroupBy(rows, idFieldName);
+        var groupedRows = _.Values(rowsByIdField);
+        return _.Map(groupedRows, x => AggregateField(x, fieldName, aggregateFieldName));
+    }
+    
+    public static StringMap AggregateField(ImmutableList<StringMap> rows, string fieldName, string newName)
+    {
+        var aggregatedValues = _.Map(rows, x => _.Get(x, fieldName));
+        var firstRow = rows[0];
+        var firstRowWithAggregatedValues = _.Set(firstRow, newName, aggregatedValues);
+        return firstRowWithAggregatedValues.Remove(fieldName);
     }
 }

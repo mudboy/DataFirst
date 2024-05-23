@@ -106,14 +106,14 @@ public sealed class Tests
             "authorNames", List.Of("Sean Covey", "Stephen Covey")
         );
 
-        AggregateField(rows7Habits, "author_name", "authorNames")
+        _.AggregateField(rows7Habits, "author_name", "authorNames")
             .Should().BeEquivalentTo(expectedResults);
     }
 
     [Fact]
     public void Should_Aggregate_Fields()
     {
-        AggregateFields(authorsListMap, "isbn", "author_name", "authorNames")
+        _.AggregateFields(authorsListMap, "isbn", "author_name", "authorNames")
             .Should().BeEquivalentTo(List.Of(
                 Map.Of("isbn", "978-1982137274",
                     "title", "7 Habits of Highly Effective People",
@@ -122,22 +122,6 @@ public sealed class Tests
                     "title", "Watchmen",
                     "authorNames", List.Of("Billy Gibson"))
                 ));
-    }
-
-    public static ImmutableList<StringMap> AggregateFields(ImmutableList<StringMap> rows, string idFieldName, string fieldName,
-        string aggregateFieldName)
-    {
-        var rowsByIsbn = _.GroupBy(rows, idFieldName);
-        var groupedRows = _.Values(rowsByIsbn);
-        return _.Map(groupedRows, x => AggregateField(x, fieldName, aggregateFieldName));
-    }
-    
-    public static StringMap AggregateField(ImmutableList<StringMap> rows, string fieldName, string newName)
-    {
-        var aggregatedValues = _.Map(rows, x => _.Get(x, fieldName));
-        var firstRow = rows[0];
-        var firstRowWithAggregatedValues = _.Set(firstRow, newName, aggregatedValues);
-        return firstRowWithAggregatedValues.Remove(fieldName);
     }
 
     [Fact]
@@ -220,8 +204,8 @@ public sealed class Tests
     [Fact]
     public void Should_Get_AuthorNames()
     {
-        var catalogData = _.Get<StringMap>(Library.LibraryData, "catalog");
-        var book = _.Get<StringMap>(Library.LibraryData, List.Of("catalog", "booksByIsbn", "978-1779501127"));
+        var catalogData = _.Get<StringMap>(Library.LibraryData, "cataloga");
+        var book = _.Get<StringMap>(Library.LibraryData, "catalog", "booksByIsbn", "978-1779501127");
         
         var names = Catalog.AuthorNames(catalogData, book);
 

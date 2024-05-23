@@ -56,6 +56,9 @@ public static partial class _
     public static T Get<T>(StringMap map, IEnumerable<string> keyPath) =>
         (T)Get(map, keyPath);
 
+    public static T Get<T>(StringMap map, params string[] keyPath) =>
+        (T)Get(map, keyPath);
+
     public static object Get(StringMap map, string key, object? fallbackValue = default) =>
         map.TryGetValue(key, out var value) ? value : fallbackValue ?? "undefined";
 
