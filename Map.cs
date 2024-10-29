@@ -7,7 +7,8 @@ public static class Map
 {
     public static StringMap Of(params object[] pairs)
     {
-        if (pairs == null) throw new ArgumentNullException(nameof(pairs));
+        ArgumentNullException.ThrowIfNull(pairs);
+        
         if (pairs.Length % 2 != 0) throw new ArgumentException("must be even number of values", nameof(pairs));
 
         return pairs.Chunk(2).Aggregate(ImmutableDictionary.CreateBuilder<string, object>(), (builder, pair) =>
