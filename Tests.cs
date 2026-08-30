@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using DataFirst.Lodash;
 using FluentAssertions;
 using Xunit;
 
@@ -23,7 +24,7 @@ public sealed class Tests
         "978-1982137274", sevenHabitsMap
     );
 
-    private static readonly ImmutableList<StringMap> authorsListMap = List.Of(
+    private static readonly IndexedList authorsListMap = List.Of(
         Map.Of("isbn", "978-1982137274",
             "title", "7 Habits of Highly Effective People",
             "author_name", "Steven Clarey"),
@@ -45,14 +46,14 @@ public sealed class Tests
     [Fact]
     public void Should_Get_By_Path()
     {
-        _.Get<string>(searchResultsMap, List.Of("978-1779501127", "title"))
+        _.Get<string>(searchResultsMap, ["978-1779501127", "title"])
             .Should().Be("Watchmen");
     }
 
     [Fact]
     public void Should_Check_By_Path()
     {
-        _.ContainsKey(searchResultsMap, List.Of("978-1779501127", "title"))
+        _.ContainsKey(searchResultsMap, ["978-1779501127", "title"])
             .Should().BeTrue();
     }
 
@@ -67,7 +68,7 @@ public sealed class Tests
     [Fact]
     public void Should_Be_Able_To_Use_Path_Getters()
     {
-        var TITLE = Getter.Create<string>(List.Of("978-1779501127", "title"));
+        var TITLE = Getter.Create<string>(["978-1779501127", "title"]);
 
         TITLE.Get(searchResultsMap).ToUpper().Should().Be("WATCHMEN");
     }
@@ -106,22 +107,23 @@ public sealed class Tests
             "authorNames", List.Of("Sean Covey", "Stephen Covey")
         );
 
-        _.AggregateField(rows7Habits, "author_name", "authorNames")
-            .Should().BeEquivalentTo(expectedResults);
+        var result = _.AggregateField(rows7Habits, "author_name", "authorNames");
+        result.Should().BeEquivalentTo(expectedResults);
     }
 
     [Fact]
     public void Should_Aggregate_Fields()
     {
-        _.AggregateFields(authorsListMap, "isbn", "author_name", "authorNames")
-            .Should().BeEquivalentTo(List.Of(
-                Map.Of("isbn", "978-1982137274",
-                    "title", "7 Habits of Highly Effective People",
-                    "authorNames", List.Of("Tom Jons", "Steven Clarey")),
-                Map.Of("isbn", "978-1779501127",
-                    "title", "Watchmen",
-                    "authorNames", List.Of("Billy Gibson"))
-                ));
+        var expectedResult = List.Of(
+            Map.Of("isbn", "978-1982137274",
+                "title", "7 Habits of Highly Effective People",
+                "authorNames", List.Of("Tom Jons", "Steven Clarey")),
+            Map.Of("isbn", "978-1779501127",
+                "title", "Watchmen",
+                "authorNames", List.Of("Billy Gibson"))
+        );
+        var result = _.AggregateFields(authorsListMap, "isbn", "author_name", "authorNames");
+        result.Should().BeEquivalentTo(expectedResult);
     }
 
     [Fact]
@@ -160,7 +162,7 @@ public sealed class Tests
         var input = Map.Of("name", List.Of("one", "two", "one"));
 
         var result = _.Update(input, "name", 
-            o => ((ImmutableList<string>)o).Distinct().ToImmutableList());
+            o => ((IndexedList)o).Distinct().ToImmutableList());
 
         result.Should().BeEquivalentTo(Map.Of("name", List.Of("one", "two")));
     }
@@ -204,8 +206,8 @@ public sealed class Tests
     [Fact]
     public void Should_Get_AuthorNames()
     {
-        var catalogData = _.Get<StringMap>(Library.LibraryData, "cataloga");
-        var book = _.Get<StringMap>(Library.LibraryData, "catalog", "booksByIsbn", "978-1779501127");
+        var catalogData = _.Get<StringMap>(Library.LibraryData, "catalog");
+        var book = _.Get<StringMap>(Library.LibraryData, ["catalog", "booksByIsbn", "978-1779501127"]);
         
         var names = Catalog.AuthorNames(catalogData, book);
 
@@ -231,5 +233,122 @@ public sealed class Tests
         var result = Library.SearchBooksByTitleJson(Library.LibraryData, "Watchmen");
 
         result.Should().NotBeEmpty();
+    }    
+    
+    [Fact]
+    public void Should_Not_Modify_Original_With_Set()
+    {
+        var oldData = Library.LibraryData;
+        var newData = (StringMap)_.Set(oldData, 
+            ["catalog", "booksByIsbn", "978-1779501127", "publicationYear"], 1986);
+
+        newData.Should().NotBeEquivalentTo(oldData);
+    }
+
+    [Fact]
+    public void Should_Be_Immutable()
+    {
+        var books = Map.Of(
+            "978-1779501127", Map.Of(
+                "isbn", "978-1779501127",
+                "title", "Watchmen",
+                "publicationYear", 1987,
+                "authorIds", List.Of("alan-moore", "dave-gibbons")
+            ));
+
+        var nextBooks = _.Set(books, ["978-1779501127", "publicationYear"], 1986);
+        var beforeName = _.Get(nextBooks, ["978-1779501127", "authorIds", 1]);
+        _.Set(nextBooks, ["978-1779501127", "authorIds", 1], "dave-chester-gibbons");
+        var afterName = _.Get(nextBooks, ["978-1779501127", "authorIds", 1]);
+
+        beforeName.Should().Be(afterName);
+    }
+
+    [Fact]
+    public void Should_Add_Non_Existent_Items_On_Set()
+    {
+        var map = Map.Of("key", "value");
+        var updated = _.Set(map, "isVip", true);
+
+        _.ContainsKey(updated, "isVip").Should().BeTrue();
+        _.Get<bool>(updated, "isVip").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Diffing()
+    {
+        var data1 = Map.Of(
+            "a", Map.Of(
+                "x", 1,
+                "y", List.Of(2, 3),
+                "z", 4
+            ));
+        
+        var data2 = Map.Of(
+            "a", Map.Of(
+                "x", 2,
+                "y", List.Of(2, 4),
+                "z", 4
+            ));
+
+        var expected = Map.Of(
+            "a", Map.Of(
+                "x", 2,
+                "y", List.Of(null!, 4)
+            ));
+
+        var diff = _.Diff(data1, data2);
+        diff.Should().BeEquivalentTo(expected);
+
+        // var empty = List.Of(1);
+        // var ins = _.InsertAt(empty, 1, 4);
+        // ins.Should().BeEquivalentTo(List.Of(1, 4));
+
+        var d1 = List.Of(1, 2);
+        var d2 = List.Of(1, 4);
+        
+        var no = _.Diff(_.Get(d1, "0"), _.Get(d2, "0"));
+        
+        no.Should().Be("no-diff");
+        
+        var res = _.Diff(d1, d2);
+        
+        res.Should().BeEquivalentTo(List.Of(null, 4));
+
+    }
+
+    [Fact]
+    public void DiffyLoop()
+    {
+        var watchmen = Map.Of(
+            "isbn", "978-1779501127",
+            "title", "Watchmen",
+            "publicationYear", 1987,
+            "authorIds", List.Of("alan-moore", "dave-gibbons"));
+        var alan = Map.Of(
+            "name", "Alan Moore",
+            "bookIsbns", List.Of("978-1779501127"));
+        var dave = Map.Of(
+            "name", "Dave Gibbons",
+            "bookIsbns", List.Of("978-1779501127"));
+        
+        var library = Map.Of(
+            "catalog", Map.Of(
+                "booksByIsbn", Map.Of("978-1779501127", watchmen),
+                "authorsById", Map.Of("alan-moore", alan, "dave-gibbons", dave)));
+
+        var previous = library;
+        var next = _.Set(library, 
+            ["catalog", "booksByIsbn", "978-1779501127", "publicationYear"], 1986);
+        var libraryWithUpdatedTitle = _.Set(library,
+            ["catalog", "booksByIsbn", "978-1779501127", "title"], "The Watchmen");
+        var current = _.Set(libraryWithUpdatedTitle, 
+            ["catalog", "authorsById", "dave-gibbons", "name"], "David Chester Gibbons");
+
+        var diff1 = _.Diff(previous, next);
+
+        var diff2 = _.Diff(previous, current);
+
+        diff2.Should().BeEquivalentTo(Map.Of("test", 1));
     }
 }
