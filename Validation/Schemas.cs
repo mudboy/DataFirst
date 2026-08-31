@@ -92,6 +92,27 @@ public static class Schemas
             "librarians", Map.Of("type", "object"),
             "members", Map.Of("type", "object")));
 
+    /// What a caller may add: the book it belongs to, and the item identity.
+    /// isLent is not accepted -- a new item starts out not lent.
+    public static readonly DataMap BookItemInfo = Map.Of(
+        "type", "object",
+        "required", List.Of("isbn", "id", "libId"),
+        "additionalProperties", false,
+        "properties", Map.Of(
+            "isbn", Isbn,
+            "id", Map.Of("type", "string", "minLength", 1),
+            "libId", Map.Of("type", "string", "minLength", 1)));
+
+    /// Every criterion is optional; they combine with AND.
+    public static readonly DataMap SearchQuery = Map.Of(
+        "type", "object",
+        "additionalProperties", false,
+        "properties", Map.Of(
+            "title", Map.Of("type", "string", "minLength", 1, "maxLength", 200),
+            "author", Map.Of("type", "string", "minLength", 1, "maxLength", 200),
+            "publishedAfter", Map.Of("type", "integer", "minimum", 1400, "maximum", 2100),
+            "publishedBefore", Map.Of("type", "integer", "minimum", 1400, "maximum", 2100)));
+
     public static readonly DataMap CatalogData = Map.Of(
         "type", "object",
         "required", List.Of("booksByIsbn", "authorsById"),

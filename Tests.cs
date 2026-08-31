@@ -944,21 +944,181 @@ public sealed class Tests
         unknownUser.Should().Throw<Exception>().WithMessage("Not allowed to add book items");
     }
 
+    private static DataMap CatalogFixture => Map.Of(
+        "booksByIsbn", Map.Of(
+            "978-1779501127", Map.Of(
+                "isbn", "978-1779501127",
+                "title", "Watchmen",
+                "publicationYear", 1987,
+                "authorIds", List.Of("alan-moore")),
+            "978-1982137274", Map.Of(
+                "isbn", "978-1982137274",
+                "title", "7 Habits of Highly Effective People",
+                "publicationYear", 2020,
+                "authorIds", List.Of("stephen-covey"))),
+        "authorsById", Map.Of(
+            "alan-moore", Map.Of("name", "Alan Moore", "bookIsbns", List.Of("978-1779501127")),
+            "stephen-covey", Map.Of("name", "Stephen Covey", "bookIsbns", List.Of("978-1982137274"))));
+
+    private static IEnumerable<string> TitlesOf(DataList results) =>
+        results.Select(r => _.Get<string>(r, "title"));
+
     [Fact]
-    public void Should_Let_Authorised_Users_Past_The_Permission_Check()
+    public void Should_Search_On_Combined_Criteria()
     {
-        // Catalog still has these as stubs, so reaching NotImplementedException is
-        // what a passed permission check looks like today.
-        var librarianLendings = () =>
-            Library.GetBookLendings(Library.LibraryData, "franck@gmail.com", "samantha@gmail.com");
-        librarianLendings.Should().Throw<NotImplementedException>();
+        // An empty query matches everything.
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of()))
+            .Should().BeEquivalentTo("Watchmen", "7 Habits of Highly Effective People");
 
-        var superMemberLendings = () =>
-            Library.GetBookLendings(Library.LibraryData, "samantha@gmail.com", "samantha@gmail.com");
-        superMemberLendings.Should().Throw<NotImplementedException>();
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("author", "Moore")))
+            .Should().Equal("Watchmen");
 
-        var vipAddsItem = () => Library.AddBookItem(Library.LibraryData, "vip@gmail.com", Map.Of());
-        vipAddsItem.Should().Throw<NotImplementedException>();
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("publishedAfter", 2000)))
+            .Should().Equal("7 Habits of Highly Effective People");
+
+        // Criteria combine with AND.
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("title", "Habits", "publishedBefore", 2000)))
+            .Should().BeEmpty();
+
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("title", "Habits", "publishedAfter", 2000)))
+            .Should().Equal("7 Habits of Highly Effective People");
+
+        // Bounds are inclusive.
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("publishedAfter", 1987, "publishedBefore", 1987)))
+            .Should().Equal("Watchmen");
+    }
+
+    [Fact]
+    public void Should_Search_Case_Insensitively()
+    {
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("title", "watchMEN")))
+            .Should().Equal("Watchmen");
+
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("author", "moore")))
+            .Should().Equal("Watchmen");
+
+        TitlesOf(Catalog.SearchBooksByTitle(CatalogFixture, "WATCH"))
+            .Should().Equal("Watchmen");
+    }
+
+    [Fact]
+    public void Should_Reject_A_Search_Criterion_The_Schema_Does_Not_Name()
+    {
+        var search = () => Catalog.SearchBook(CatalogFixture, Map.Of("publisher", "DC"));
+
+        search.Should().Throw<SchemaViolationException>()
+            .Which.Errors.Single().ToString().Should().Be("publisher: is not a permitted property");
+    }
+
+    [Fact]
+    public void Should_Describe_A_Members_Lendings()
+    {
+        var lendings = UserManagement.BookLendings(Users, "samantha@gmail.com");
+        var catalog = _.Get<DataMap>(Library.LibraryData, "catalog");
+
+        ShouldEqual(
+            Catalog.GetBookLendings(catalog, lendings),
+            List.Of(Map.Of(
+                "bookItemId", "book-item-1",
+                "lendingDate", "2020-04-23",
+                "title", "Watchmen",
+                "isbn", "978-1779501127",
+                "authorNames", List.Of("Alan Moore", "Dave Gibbons"))));
+    }
+
+    [Fact]
+    public void Should_Reject_A_Lending_For_A_Book_Not_In_The_Catalogue()
+    {
+        var orphan = List.Of(Map.Of(
+            "bookItemId", "book-item-9",
+            "bookIsbn", "978-0000000000",
+            "lendingDate", "2020-04-23"));
+
+        var describe = () => Catalog.GetBookLendings(CatalogFixture, orphan);
+
+        describe.Should().Throw<KeyNotFoundException>()
+            .WithMessage("*978-0000000000*");
+    }
+
+    [Fact]
+    public void Should_Add_A_Book_Item()
+    {
+        var info = Map.Of("isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib");
+
+        var updated = Catalog.AddBookItem(CatalogFixture, info);
+
+        ShouldEqual(
+            _.Get<DataList>(updated, ["booksByIsbn", "978-1779501127", "bookItems"]),
+            List.Of(Map.Of("id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)));
+
+        // A new item is not lent, and isLent cannot be supplied.
+        var withIsLent = Map.Of(
+            "isbn", "978-1779501127", "id", "book-item-4", "libId", "brooklyn-lib", "isLent", true);
+
+        var addWithIsLent = () => Catalog.AddBookItem(CatalogFixture, withIsLent);
+        addWithIsLent.Should().Throw<SchemaViolationException>()
+            .Which.Errors.Single().ToString().Should().Be("isLent: is not a permitted property");
+
+        // The argument is untouched.
+        _.ContainsKey(CatalogFixture, ["booksByIsbn", "978-1779501127", "bookItems"]).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Should_Reject_A_Duplicate_Book_Item()
+    {
+        var catalog = _.Get<DataMap>(Library.LibraryData, "catalog");
+        var taken = Map.Of("isbn", "978-1779501127", "id", "book-item-1", "libId", "nyc-central-lib");
+
+        var add = () => Catalog.AddBookItem(catalog, taken);
+        add.Should().Throw<DuplicateBookItemException>();
+    }
+
+    [Fact]
+    public void Should_Reject_A_Book_Item_For_An_Unknown_Book()
+    {
+        var info = Map.Of("isbn", "978-0000000000", "id", "book-item-3", "libId", "brooklyn-lib");
+
+        var add = () => Catalog.AddBookItem(CatalogFixture, info);
+        add.Should().Throw<KeyNotFoundException>().WithMessage("*978-0000000000*");
+    }
+
+    [Fact]
+    public void Should_Get_Lendings_End_To_End()
+    {
+        // A librarian may read another member's lendings.
+        TitlesOf(Library.GetBookLendings(Library.LibraryData, "franck@gmail.com", "samantha@gmail.com"))
+            .Should().Equal("Watchmen");
+
+        // So may a super member.
+        TitlesOf(Library.GetBookLendings(Library.LibraryData, "samantha@gmail.com", "samantha@gmail.com"))
+            .Should().Equal("Watchmen");
+
+        // A member with no lendings gets an empty list.
+        Library.GetBookLendings(Library.LibraryData, "franck@gmail.com", "vip@gmail.com")
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Should_Add_A_Book_Item_End_To_End()
+    {
+        var info = Map.Of("isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib");
+
+        var updated = Library.AddBookItem(Library.LibraryData, "vip@gmail.com", info);
+
+        var items = _.Get<DataList>(updated, ["catalog", "booksByIsbn", "978-1779501127", "bookItems"]);
+        items.Select(i => _.Get<string>(i, "id"))
+            .Should().Equal("book-item-1", "book-item-2", "book-item-3");
+
+        // The whole library data comes back, so user management survives the change.
+        UserManagement.IsLibrarian(_.Get<DataMap>(updated, "userManagementData"), "franck@gmail.com")
+            .Should().BeTrue();
+
+        // The only difference is the new item.
+        ShouldEqual(
+            _.DiffObjects(Library.LibraryData, updated),
+            Map.Of("catalog", Map.Of("booksByIsbn", Map.Of("978-1779501127", Map.Of(
+                "bookItems", Map.Of("2", Map.Of(
+                    "id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)))))));
     }
 
     [Fact]

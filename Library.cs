@@ -64,25 +64,35 @@ public static class Library
                 )
             ), "userManagementData", UserManagementSeed);
 
-    public static DataMap SearchBook(DataMap libraryData, DataMap searchQuery) =>
+    public static DataList SearchBook(DataMap libraryData, DataMap searchQuery) =>
         Catalog.SearchBook(_.Get<DataMap>(libraryData, "catalog"), searchQuery);
 
-    public static DataMap GetBookLendings(DataMap libraryData, string userId, string memberId)
+    /// A lending belongs to the member, so it is read from user management and
+    /// handed to the catalogue to be described.
+    public static DataList GetBookLendings(DataMap libraryData, string userId, string memberId)
     {
         var userManagementData = _.Get<DataMap>(libraryData, "userManagementData");
-        if (UserManagement.IsLibrarian(userManagementData, userId) ||
-            UserManagement.IsSuperMember(userManagementData, userId))
-            return Catalog.GetBookLendings(_.Get<DataMap>(libraryData, "catalog"), memberId);
-        throw new Exception("Not allowed to get book lendings");
+
+        if (!UserManagement.IsLibrarian(userManagementData, userId) &&
+            !UserManagement.IsSuperMember(userManagementData, userId))
+            throw new Exception("Not allowed to get book lendings");
+
+        var lendings = UserManagement.BookLendings(userManagementData, memberId);
+        return Catalog.GetBookLendings(_.Get<DataMap>(libraryData, "catalog"), lendings);
     }
 
+    /// Returns the whole library data, not just the catalogue, so the result is a
+    /// value the caller can commit.
     public static DataMap AddBookItem(DataMap libraryData, string userId, DataMap bookItemInfo)
     {
         var userManagementData = _.Get<DataMap>(libraryData, "userManagementData");
-        if (UserManagement.IsLibrarian(userManagementData, userId) ||
-            UserManagement.IsVipMember(userManagementData, userId))
-            return Catalog.AddBookItem(_.Get<DataMap>(libraryData, "catalog"), bookItemInfo);
-        throw new Exception("Not allowed to add book items");
+
+        if (!UserManagement.IsLibrarian(userManagementData, userId) &&
+            !UserManagement.IsVipMember(userManagementData, userId))
+            throw new Exception("Not allowed to add book items");
+
+        var catalog = Catalog.AddBookItem(_.Get<DataMap>(libraryData, "catalog"), bookItemInfo);
+        return _.Set(libraryData, "catalog", catalog);
     }
 
     public static string SearchBooksByTitleJson(DataMap libraryData, string query)
