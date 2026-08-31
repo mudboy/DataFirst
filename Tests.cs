@@ -452,10 +452,25 @@ public sealed class Tests
         var current = _.Set(libraryWithUpdatedTitle, 
             ["catalog", "authorsById", "dave-gibbons", "name"], "David Chester Gibbons");
 
+        // next changes only the publication year...
         var diff1 = _.DiffObjects(previous, next);
 
+        diff1.Should().BeEquivalentTo(
+            Map.Of("catalog", Map.Of(
+                "booksByIsbn", Map.Of(
+                    "978-1779501127", Map.Of(
+                        "publicationYear", 1986)))));
+
+        // ...while current changes the title and one author's name.
         var diff2 = _.DiffObjects(previous, current);
 
-        diff2.Should().BeEquivalentTo(Map.Of("test", 1));
+        diff2.Should().BeEquivalentTo(
+            Map.Of("catalog", Map.Of(
+                "booksByIsbn", Map.Of(
+                    "978-1779501127", Map.Of(
+                        "title", "The Watchmen")),
+                "authorsById", Map.Of(
+                    "dave-gibbons", Map.Of(
+                        "name", "David Chester Gibbons")))));
     }
 }
