@@ -371,7 +371,7 @@ public sealed class Tests
                 "y", List.Of(null!, 4)
             ));
 
-        var diff = _.Diff(data1, data2);
+        var diff = _.DiffObjects(data1, data2);
         diff.Should().BeEquivalentTo(expected);
 
         // var empty = List.Of(1);
@@ -383,12 +383,45 @@ public sealed class Tests
         
         var no = _.Diff(_.Get(d1, "0"), _.Get(d2, "0"));
         
-        no.Should().Be("no-diff");
+        (no is NoDiff).Should().BeTrue();
         
-        var res = _.Diff(d1, d2);
+        var res = _.DiffObjects(d1, d2);
         
         res.Should().BeEquivalentTo(List.Of(null, 4));
 
+    }
+
+    [Fact]
+    public void Should_Not_Confuse_A_Literal_No_Diff_Value_With_An_Unchanged_Node()
+    {
+        // "no-diff" used to be the sentinel, so a real value of "no-diff" was
+        // silently dropped from the diff as though nothing had changed.
+        var before = Map.Of("status", "pending");
+        var after = Map.Of("status", "no-diff");
+
+        _.DiffObjects(before, after)
+            .Should().BeEquivalentTo(Map.Of("status", "no-diff"));
+    }
+
+    [Fact]
+    public void Should_Report_Changed_Leaves_And_Unchanged_Nodes()
+    {
+        var unchanged = _.Diff("Watchmen", "Watchmen");
+        (unchanged is NoDiff).Should().BeTrue();
+
+        // A union value's runtime type is the union itself, so pattern matching
+        // rather than BeOfType is how you get at the case.
+        var changed = _.Diff("Watchmen", "The Watchmen") switch
+        {
+            Changed(var value) => value,
+            NoDiff => null
+        };
+        changed.Should().Be("The Watchmen");
+
+        var equivalentMaps = _.Diff(
+            Map.Of("title", "Watchmen"),
+            Map.Of("title", "Watchmen"));
+        (equivalentMaps is NoDiff).Should().BeTrue();
     }
 
     [Fact]
@@ -419,9 +452,9 @@ public sealed class Tests
         var current = _.Set(libraryWithUpdatedTitle, 
             ["catalog", "authorsById", "dave-gibbons", "name"], "David Chester Gibbons");
 
-        var diff1 = _.Diff(previous, next);
+        var diff1 = _.DiffObjects(previous, next);
 
-        var diff2 = _.Diff(previous, current);
+        var diff2 = _.DiffObjects(previous, current);
 
         diff2.Should().BeEquivalentTo(Map.Of("test", 1));
     }

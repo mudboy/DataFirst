@@ -61,39 +61,6 @@ public static partial class _
 
     public static IndexedList Union(IndexedList l1, IndexedList l2) => l1.Union(l2).ToImmutableList();
 
-    public static object DiffObjects(object data1, object data2)
-    {
-        object emptyObject = data1 is IndexedList ? 
-            IndexedList.Empty : StringMap.Empty;
-
-        if (data1 == data2) return emptyObject;
-
-        var keys = _.Union(_.Keys(data1), _.Keys(data2));
-
-        return keys.Aggregate(emptyObject, (acc, kObj) =>
-        {
-            var k = (string)kObj;
-            var res = _.Diff(Get(data1, k), Get(data2, k));
-            if ((IsObject(res) && IsEmpty(res)) || res.Equals("no-diff"))
-            {
-                return acc;
-            }
-
-            return Set(acc, k, res);
-        });
-
-    }
-
-    public static object Diff(object data1, object data2)
-    {
-        if (IsObject(data1) && IsObject(data2))
-            return DiffObjects(data1, data2);
-        // leafs
-        if (!Equals(data1, data2))
-            return data2;
-        return "no-diff";
-    }
-
     public static object Reduce(object obj, Func<object, object, object, object> f, object initial)
     {
         return obj switch
