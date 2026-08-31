@@ -449,14 +449,16 @@ public sealed class Tests
                 "z", 4
             ));
 
+        // A list diff is keyed by index: only slot 1 changed, and there is no
+        // padding to confuse with a real null.
         var expected = Map.Of(
             "a", Map.Of(
                 "x", 2,
-                "y", List.Of(DataNull.Instance, 4)
+                "y", Map.Of("1", 4)
             ));
 
         var diff = _.DiffObjects(data1, data2);
-        ShouldEqual(diff.As<DataMap>(), expected);
+        ShouldEqual(diff, expected);
 
         // var empty = List.Of(1);
         // var ins = _.InsertAt(empty, 1, 4);
@@ -471,7 +473,7 @@ public sealed class Tests
         
         var res = _.DiffObjects(d1, d2);
         
-        ShouldEqual(res.As<DataList>(), List.Of(DataNull.Instance, 4));
+        ShouldEqual(res, Map.Of("1", 4));
 
     }
 
@@ -507,6 +509,119 @@ public sealed class Tests
             Map.Of("title", "Watchmen"),
             Map.Of("title", "Watchmen"));
         (equivalentMaps is NoDiff).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Should_List_Information_Paths()
+    {
+        var data = Map.Of(
+            "a", Map.Of("x", 1, "y", List.Of("p", "q")),
+            "b", true);
+
+        _.InformationPaths(data).Select(p => p.ToString())
+            .Should().BeEquivalentTo("a.x", "a.y.[0]", "a.y.[1]", "b");
+    }
+
+    [Fact]
+    public void Should_Merge_A_Value_Genuinely_Changed_To_Null()
+    {
+        // This is why a list diff is keyed by index. With positional padding the
+        // null at slot 0 (meaning "unchanged") would be indistinguishable from
+        // slot 1's real change to null, and merge would have to guess.
+        var previous = Map.Of("xs", List.Of(1, 2));
+        var next = Map.Of("xs", List.Of(1, DataNull.Instance));
+
+        var diff = _.DiffObjects(previous, next);
+        ShouldEqual(diff, Map.Of("xs", Map.Of("1", DataNull.Instance)));
+
+        ShouldEqual(_.Merge(previous, diff), next);
+    }
+
+    [Fact]
+    public void Should_Merge_A_Diff_Back_Onto_Its_Source()
+    {
+        var previous = Map.Of("a", Map.Of("x", 1, "y", List.Of(2, 3)));
+        var next = Map.Of("a", Map.Of("x", 9, "y", List.Of(2, 30)));
+
+        ShouldEqual(_.Merge(previous, _.DiffObjects(previous, next)), next);
+    }
+
+    [Fact]
+    public void Should_Fast_Forward_When_Nothing_Was_Committed_In_Between()
+    {
+        var previous = Map.Of("a", 1);
+        var next = Map.Of("a", 2);
+
+        ShouldEqual(SystemConsistency.Reconcile(previous, previous, next), next);
+    }
+
+    [Fact]
+    public void Should_Merge_Concurrent_Changes_To_Different_Places()
+    {
+        var state = new SystemState(Map.Of("catalog", Map.Of("a", 1, "b", 2)));
+        var start = state.Get();
+
+        // Two mutations calculated from the same version, touching different keys.
+        var next1 = _.Set(start, ["catalog", "a"], 10);
+        var next2 = _.Set(start, ["catalog", "b"], 20);
+
+        state.Commit(start, next1);
+        state.Commit(start, next2); // reconciled against the first
+
+        ShouldEqual(state.Get(), Map.Of("catalog", Map.Of("a", 10, "b", 20)));
+    }
+
+    [Fact]
+    public void Should_Reject_Concurrent_Changes_To_The_Same_Place()
+    {
+        var state = new SystemState(Map.Of("catalog", Map.Of("a", 1)));
+        var start = state.Get();
+
+        state.Commit(start, _.Set(start, ["catalog", "a"], 10));
+
+        var secondCommit = () => state.Commit(start, _.Set(start, ["catalog", "a"], 20));
+
+        secondCommit.Should().Throw<ConcurrentModificationException>()
+            .Which.ConflictingPaths.Single().ToString().Should().Be("catalog.a");
+
+        // The rejected commit left the state alone.
+        ShouldEqual(state.Get(), Map.Of("catalog", Map.Of("a", 10)));
+    }
+
+    [Fact]
+    public void Should_Reconcile_The_Chapter_Five_Scenario()
+    {
+        // The DiffyLoop scenario: next changed the publication year while current
+        // changed the title and an author name. Different places, so both survive.
+        var previous = Map.Of(
+            "booksByIsbn", Map.Of("978-1779501127", Map.Of("title", "Watchmen", "publicationYear", 1987)),
+            "authorsById", Map.Of("dave-gibbons", Map.Of("name", "Dave Gibbons")));
+
+        var next = _.Set(previous, ["booksByIsbn", "978-1779501127", "publicationYear"], 1986);
+
+        var current = _.Set(
+            _.Set(previous, ["booksByIsbn", "978-1779501127", "title"], "The Watchmen"),
+            ["authorsById", "dave-gibbons", "name"], "David Chester Gibbons");
+
+        ShouldEqual(SystemConsistency.Reconcile(current, previous, next), Map.Of(
+            "booksByIsbn", Map.Of("978-1779501127", Map.Of("title", "The Watchmen", "publicationYear", 1986)),
+            "authorsById", Map.Of("dave-gibbons", Map.Of("name", "David Chester Gibbons"))));
+    }
+
+    [Fact]
+    public void Should_Not_Lose_Updates_Under_Parallel_Commits()
+    {
+        const int workers = 16;
+        var state = new SystemState(Map.Of("counters", Map.Of()));
+
+        Parallel.For(0, workers, i =>
+            state.Update(current => _.Set(current, ["counters", $"w{i}"], i)));
+
+        var counters = _.Get<DataMap>(state.Get(), "counters");
+
+        counters.Count.Should().Be(workers);
+        for (var i = 0; i < workers; i++)
+            _.Get<long>(counters, $"w{i}").Should().Be(i);
     }
 
     [Fact]

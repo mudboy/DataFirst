@@ -29,24 +29,32 @@ public static partial class _
         return data1.Equals(data2) ? NoDiff.Instance : new Changed(data2);
     }
 
-    /// Diffs two composites, returning a structure of the same shape containing only
-    /// the leaves that differ. An empty result means the two are equivalent.
+    /// Diffs two composites, returning a map holding only what differs. An empty
+    /// result means the two are equivalent.
+    ///
+    /// A diff is always a map, even when diffing lists -- list indices become string
+    /// keys. Mirroring the list's shape instead would have to pad the unchanged slots,
+    /// and that padding is indistinguishable from an element genuinely changed to null,
+    /// which makes any merge over it silently wrong. Index keys carry only what changed.
     ///
     /// A key present on only one side diffs against null, so additions show up as the
     /// new value and removals as null.
-    public static DataValue DiffObjects(DataValue data1, DataValue data2)
+    public static DataMap DiffObjects(DataValue data1, DataValue data2)
     {
-        DataValue empty = data1 is DataList ? DataList.Empty : DataMap.Empty;
-
-        if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return empty;
+        if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return DataMap.Empty;
 
         var keys = Union(Keys(data1), Keys(data2));
+        var diff = DataMap.CreateBuilder();
 
-        return keys.Aggregate(empty, (acc, key) =>
-            Diff(GetOrNull(data1, key), GetOrNull(data2, key)) switch
-            {
-                NoDiff => acc,
-                Changed(var value) => Set(acc, key, value)
-            });
+        foreach (var key in keys)
+            if (Diff(GetOrNull(data1, key), GetOrNull(data2, key)) is Changed(var value))
+                diff.Set(KeyName(key), value);
+
+        return diff.ToDataMap();
     }
+
+    /// List indices address a map as their string form, which Get and Set accept
+    /// on the way back into a list.
+    private static string KeyName(StringOrInt key) =>
+        key switch { string s => s, int i => i.ToString() };
 }
