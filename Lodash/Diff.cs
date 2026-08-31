@@ -10,14 +10,14 @@ public sealed record NoDiff
     public static readonly NoDiff Instance = new();
 }
 
-public sealed record Changed(object Value);
+public sealed record Changed(DataValue Value);
 
 public static partial class _
 {
     /// Diffs two nodes. Returns NoDiff when they are equivalent, otherwise the change:
-    /// for objects that is a nested structure holding only the differing leaves, for
-    /// leaves it is the new value.
-    public static DiffResult Diff(object data1, object data2)
+    /// for composites that is a nested structure holding only the differing leaves,
+    /// for leaves it is the new value.
+    public static DiffResult Diff(DataValue data1, DataValue data2)
     {
         if (IsObject(data1) && IsObject(data2))
         {
@@ -26,29 +26,27 @@ public static partial class _
         }
 
         // leafs
-        return Equals(data1, data2) ? NoDiff.Instance : new Changed(data2);
+        return data1.Equals(data2) ? NoDiff.Instance : new Changed(data2);
     }
 
-    /// Diffs two objects, returning a structure of the same shape containing only the
-    /// leaves that differ. An empty result means the two objects are equivalent.
-    public static object DiffObjects(object data1, object data2)
+    /// Diffs two composites, returning a structure of the same shape containing only
+    /// the leaves that differ. An empty result means the two are equivalent.
+    ///
+    /// A key present on only one side diffs against null, so additions show up as the
+    /// new value and removals as null.
+    public static DataValue DiffObjects(DataValue data1, DataValue data2)
     {
-        object emptyObject = data1 is IndexedList
-            ? IndexedList.Empty
-            : StringMap.Empty;
+        DataValue empty = data1 is DataList ? DataList.Empty : DataMap.Empty;
 
-        if (ReferenceEquals(data1, data2)) return emptyObject;
+        if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return empty;
 
         var keys = Union(Keys(data1), Keys(data2));
 
-        return keys.Aggregate(emptyObject, (acc, kObj) =>
-        {
-            var k = (string)kObj;
-            return Diff(Get(data1, k), Get(data2, k)) switch
+        return keys.Aggregate(empty, (acc, key) =>
+            Diff(GetOrNull(data1, key), GetOrNull(data2, key)) switch
             {
                 NoDiff => acc,
-                Changed(var value) => Set(acc, k, value)
-            };
-        });
+                Changed(var value) => Set(acc, key, value)
+            });
     }
 }

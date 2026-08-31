@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DataFirst.Lodash;
 
 namespace DataFirst;
@@ -7,7 +6,7 @@ namespace DataFirst;
 public static class Library
 {
 
-    public static StringMap LibraryData =
+    public static DataMap LibraryData =
         Map.Of("catalog",
             Map.Of(
                 "booksByIsbn", Map.Of(
@@ -42,31 +41,30 @@ public static class Library
                 )
             ), "userManagementData", Map.Of());
 
-    public static StringMap SearchBook(StringMap libraryData, StringMap searchQuery) =>
-        Catalog.SearchBook(_.Get<StringMap>(libraryData, "catalog"), searchQuery);
+    public static DataMap SearchBook(DataMap libraryData, DataMap searchQuery) =>
+        Catalog.SearchBook(_.Get<DataMap>(libraryData, "catalog"), searchQuery);
 
-    public static StringMap GetBookLendings(StringMap libraryData, string userId, string memberId)
+    public static DataMap GetBookLendings(DataMap libraryData, string userId, string memberId)
     {
-        var userManagementData = _.Get<StringMap>(libraryData, "userManagementData");
+        var userManagementData = _.Get<DataMap>(libraryData, "userManagementData");
         if (UserManagement.IsLibrarian(userManagementData, userId) ||
             UserManagement.IsSuperMember(userManagementData, userId))
-            return Catalog.GetBookLendings(_.Get<StringMap>(libraryData, "catalog"), memberId);
+            return Catalog.GetBookLendings(_.Get<DataMap>(libraryData, "catalog"), memberId);
         throw new Exception("Not allowed to get book lendings");
     }
 
-    public static StringMap AddBookItem(StringMap libraryData, string userId, StringMap bookItemInfo)
+    public static DataMap AddBookItem(DataMap libraryData, string userId, DataMap bookItemInfo)
     {
-        var userManagementData = _.Get<StringMap>(libraryData, "userManagementData");
+        var userManagementData = _.Get<DataMap>(libraryData, "userManagementData");
         if (UserManagement.IsLibrarian(userManagementData, userId) ||
             UserManagement.IsVipMember(userManagementData, userId))
-            return Catalog.AddBookItem(_.Get<StringMap>(libraryData, "catalog"), bookItemInfo);
+            return Catalog.AddBookItem(_.Get<DataMap>(libraryData, "catalog"), bookItemInfo);
         throw new Exception("Not allowed to add book items");
     }
 
-    public static string SearchBooksByTitleJson(StringMap libraryData, string query)
+    public static string SearchBooksByTitleJson(DataMap libraryData, string query)
     {
-        var results = Catalog.SearchBooksByTitle(_.Get<StringMap>(libraryData, "catalog"), query);
-        var resultsJson = JsonSerializer.Serialize(results);
-        return resultsJson;
+        var results = Catalog.SearchBooksByTitle(_.Get<DataMap>(libraryData, "catalog"), query);
+        return DataJson.Serialize(results);
     }
 }

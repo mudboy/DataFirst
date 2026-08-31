@@ -7,24 +7,34 @@ namespace DataFirst;
 
 public sealed class Tests
 {
-    private static readonly StringMap watchmenMap = Map.Of(
+    /// Asserts through DataMap/DataList's own structural equality. Both implement
+    /// IEnumerable, so a plain Should().Be() would route to FluentAssertions'
+    /// collection assertions and walk members instead. Failure messages print the
+    /// values as JSON.
+    private static void ShouldEqual(object actual, object expected) =>
+        actual.Equals(expected).Should().BeTrue($"of\n  expected: {expected}\n  actual:   {actual}");
+
+    private static void ShouldNotEqual(object actual, object expected) =>
+        actual.Should().NotBe(expected);
+
+    private static readonly DataMap watchmenMap = Map.Of(
         "isbn", "978-1779501127",
         "title", "Watchmen",
         "publicationYear", 1987
     );
 
-    private static readonly StringMap sevenHabitsMap = Map.Of(
+    private static readonly DataMap sevenHabitsMap = Map.Of(
         "isbn", "978-1982137274",
         "title", "7 Habits of Highly Effective People",
         "publicationYear", 2020
     );
 
-    private readonly StringMap searchResultsMap = Map.Of(
+    private readonly DataMap searchResultsMap = Map.Of(
         "978-1779501127", watchmenMap,
         "978-1982137274", sevenHabitsMap
     );
 
-    private static readonly IndexedList authorsListMap = List.Of(
+    private static readonly DataList authorsListMap = List.Of(
         Map.Of("isbn", "978-1982137274",
             "title", "7 Habits of Highly Effective People",
             "author_name", "Steven Clarey"),
@@ -86,7 +96,7 @@ public sealed class Tests
                    "title", "Watchmen", 
                    "publication_year", 1985));
 
-        maps.Should().BeEquivalentTo(expected);
+        ShouldEqual(maps, expected);
     }
 
     [Fact]
@@ -108,7 +118,7 @@ public sealed class Tests
         );
 
         var result = _.AggregateField(rows7Habits, "author_name", "authorNames");
-        result.Should().BeEquivalentTo(expectedResults);
+        ShouldEqual(result, expectedResults);
     }
 
     [Fact]
@@ -117,13 +127,13 @@ public sealed class Tests
         var expectedResult = List.Of(
             Map.Of("isbn", "978-1982137274",
                 "title", "7 Habits of Highly Effective People",
-                "authorNames", List.Of("Tom Jons", "Steven Clarey")),
+                "authorNames", List.Of("Steven Clarey", "Tom Jons")),
             Map.Of("isbn", "978-1779501127",
                 "title", "Watchmen",
                 "authorNames", List.Of("Billy Gibson"))
         );
         var result = _.AggregateFields(authorsListMap, "isbn", "author_name", "authorNames");
-        result.Should().BeEquivalentTo(expectedResult);
+        ShouldEqual(result, expectedResult);
     }
 
     [Fact]
@@ -141,7 +151,7 @@ public sealed class Tests
                 "available", false
             ));
 
-        _.KeyBy(books, "isbn").Should().BeEquivalentTo(
+        ShouldEqual(_.KeyBy(books, "isbn"),
             Map.Of(
                 "978-0812981605", Map.Of(
                     "available", false,
@@ -162,9 +172,9 @@ public sealed class Tests
         var input = Map.Of("name", List.Of("one", "two", "one"));
 
         var result = _.Update(input, "name", 
-            o => ((IndexedList)o).Distinct().ToImmutableList());
+            o => DataList.Create(o.As<DataList>().Distinct()));
 
-        result.Should().BeEquivalentTo(Map.Of("name", List.Of("one", "two")));
+        ShouldEqual(result, Map.Of("name", List.Of("one", "two")));
     }
 
     [Fact]
@@ -200,28 +210,28 @@ public sealed class Tests
             ));
 
         var result = _.Unwind(customer, "items");
-        result.Should().BeEquivalentTo(expectedRes);
+        ShouldEqual(result, expectedRes);
     }
 
     [Fact]
     public void Should_Get_AuthorNames()
     {
-        var catalogData = _.Get<StringMap>(Library.LibraryData, "catalog");
-        var book = _.Get<StringMap>(Library.LibraryData, ["catalog", "booksByIsbn", "978-1779501127"]);
+        var catalogData = _.Get<DataMap>(Library.LibraryData, "catalog");
+        var book = _.Get<DataMap>(Library.LibraryData, ["catalog", "booksByIsbn", "978-1779501127"]);
         
         var names = Catalog.AuthorNames(catalogData, book);
 
-        names.Should().BeEquivalentTo(List.Of("Alan Moore", "Dave Gibbons"));
+        ShouldEqual(names, List.Of("Alan Moore", "Dave Gibbons"));
     }
 
     [Fact]
     public void Should_Search_Books_By_Title()
     {   
-        var catalogData = _.Get<StringMap>(Library.LibraryData, "catalog");
+        var catalogData = _.Get<DataMap>(Library.LibraryData, "catalog");
 
         var result = Catalog.SearchBooksByTitle(catalogData, "Wat");
 
-        result.Should().BeEquivalentTo(List.Of(
+        ShouldEqual(result, List.Of(
             Map.Of("authorNames", List.Of("Alan Moore", "Dave Gibbons"),
                 "isbn", "978-1779501127",
                 "title", "Watchmen")));
@@ -232,17 +242,95 @@ public sealed class Tests
     {
         var result = Library.SearchBooksByTitleJson(Library.LibraryData, "Watchmen");
 
-        result.Should().NotBeEmpty();
+        result.Should().Be(
+            """[{"title":"Watchmen","isbn":"978-1779501127","authorNames":["Alan Moore","Dave Gibbons"]}]""");
     }    
     
+    [Fact]
+    public void Should_Walk_A_Path_That_Mixes_Keys_And_Indexes()
+    {
+        var data = Map.Of(
+            "a", List.Of(
+                Map.Of("x", "wrong"),
+                Map.Of("b", List.Of("zero", "one", "two"))));
+
+        _.Get<string>(data, ["a", 1, "b", 2]).Should().Be("two");
+    }
+
+    [Fact]
+    public void Should_Write_Through_A_Path_That_Mixes_Keys_And_Indexes()
+    {
+        var data = Map.Of(
+            "a", List.Of(
+                Map.Of("b", List.Of("zero", "one"))));
+
+        var updated = _.Set(data, ["a", 0, "b", 1], "ONE");
+
+        ShouldEqual(updated, Map.Of(
+            "a", List.Of(
+                Map.Of("b", List.Of("zero", "ONE")))));
+    }
+
+    [Fact]
+    public void Should_Check_A_Path_Through_Lists()
+    {
+        var data = Map.Of("a", List.Of(Map.Of("b", "value")));
+
+        _.ContainsKey(data, ["a", 0, "b"]).Should().BeTrue();
+        _.ContainsKey(data, ["a", 0, "missing"]).Should().BeFalse();
+        _.ContainsKey(data, ["a", 9, "b"]).Should().BeFalse();
+
+        // A leaf part-way along the path is absence, not an exception.
+        _.ContainsKey(data, ["a", 0, "b", "deeper"]).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Should_Switch_Exhaustively_Over_Every_Case()
+    {
+        // No default arm: the compiler checks this covers the union.
+        static string Name(DataValue v) => v switch
+        {
+            DataNull => "null",
+            string => "string",
+            long => "long",
+            double => "double",
+            bool => "bool",
+            DataMap => "map",
+            DataList => "list"
+        };
+
+        Name(DataNull.Instance).Should().Be("null");
+        Name("x").Should().Be("string");
+        Name(1987).Should().Be("long");
+        Name(1.5).Should().Be("double");
+        Name(true).Should().Be("bool");
+        Name(Map.Of()).Should().Be("map");
+        Name(List.Of()).Should().Be("list");
+    }
+
+    [Fact]
+    public void Should_Preserve_Insertion_Order()
+    {
+        var map = Map.Of("z", 1, "a", 2, "m", 3);
+
+        map.Keys.Should().Equal("z", "a", "m");
+
+        // Overwriting keeps position; a new key appends.
+        _.Set(map, "a", 99).Keys.Should().Equal("z", "a", "m");
+        _.Set(map, "b", 4).Keys.Should().Equal("z", "a", "m", "b");
+
+        // Order is presentation only -- equality ignores it.
+        ShouldEqual(Map.Of("a", 1, "b", 2), Map.Of("b", 2, "a", 1));
+    }
+
     [Fact]
     public void Should_Not_Modify_Original_With_Set()
     {
         var oldData = Library.LibraryData;
-        var newData = (StringMap)_.Set(oldData, 
+        var newData = _.Set(oldData, 
             ["catalog", "booksByIsbn", "978-1779501127", "publicationYear"], 1986);
 
-        newData.Should().NotBeEquivalentTo(oldData);
+        ShouldNotEqual(newData, oldData);
     }
 
     [Fact]
@@ -269,10 +357,9 @@ public sealed class Tests
     {
         var authorIds = List.Of("alan-moore", "dave-gibbons");
 
-        var result = (IndexedList)_.Set(authorIds, 1, "dave-chester-gibbons");
+        var result = _.Set(authorIds, 1, "dave-chester-gibbons").As<DataList>();
 
-        result.Should().BeEquivalentTo(List.Of("alan-moore", "dave-chester-gibbons"),
-            o => o.WithStrictOrdering());
+        ShouldEqual(result, List.Of("alan-moore", "dave-chester-gibbons"));
     }
 
     [Fact]
@@ -284,58 +371,55 @@ public sealed class Tests
 
         var updated = _.Set(books, ["978-1779501127", "authorIds", 1], "dave-chester-gibbons");
 
-        _.Get<IndexedList>(updated, ["978-1779501127", "authorIds"])
-            .Should().BeEquivalentTo(List.Of("alan-moore", "dave-chester-gibbons"),
-                o => o.WithStrictOrdering());
+        ShouldEqual(
+            _.Get<DataList>(updated, ["978-1779501127", "authorIds"]),
+            List.Of("alan-moore", "dave-chester-gibbons"));
     }
 
     [Fact]
     public void Should_Pad_With_Nulls_When_Setting_Past_The_End()
     {
-        var result = (IndexedList)_.Set(List.Of("first"), 3, "fourth");
+        var result = _.Set(List.Of("first"), 3, "fourth").As<DataList>();
 
-        result.Should().BeEquivalentTo(List.Of("first", null!, null!, "fourth"),
-            o => o.WithStrictOrdering());
+        ShouldEqual(result, List.Of("first", DataNull.Instance, DataNull.Instance, "fourth"));
     }
 
     [Fact]
     public void Should_Insert_Rather_Than_Replace_With_InsertAt()
     {
-        _.InsertAt(List.Of(1), 1, 4)
-            .Should().BeEquivalentTo(List.Of(1, 4), o => o.WithStrictOrdering());
+        ShouldEqual(_.InsertAt(List.Of(1), 1, 4), List.Of(1, 4));
 
-        _.InsertAt(List.Of("a", "c"), 1, "b")
-            .Should().BeEquivalentTo(List.Of("a", "b", "c"), o => o.WithStrictOrdering());
+        ShouldEqual(_.InsertAt(List.Of("a", "c"), 1, "b"), List.Of("a", "b", "c"));
     }
 
     [Fact]
     public void Should_Reduce_A_List_With_Increasing_Indexes()
     {
-        var seenIndexes = new System.Collections.Generic.List<object>();
+        var seenIndexes = new System.Collections.Generic.List<int>();
 
-        var total = _.Reduce(List.Of(10, 20, 30), (acc, v, idx) =>
+        var total = _.Reduce(List.Of(10, 20, 30), (int acc, DataValue v, StringOrInt idx) =>
         {
-            seenIndexes.Add(idx);
-            return (int)acc + (int)v;
+            seenIndexes.Add(idx switch { int i => i, string s => int.Parse(s) });
+            return acc + (int)v.As<long>();
         }, 0);
 
         total.Should().Be(60);
-        seenIndexes.Should().BeEquivalentTo(new object[] { 0, 1, 2 }, o => o.WithStrictOrdering());
+        seenIndexes.Should().Equal(0, 1, 2);
     }
 
     [Fact]
     public void Should_Reduce_A_Map_With_Its_Keys()
     {
-        var seenKeys = new System.Collections.Generic.List<object>();
+        var seenKeys = new System.Collections.Generic.List<string>();
 
-        var total = _.Reduce(Map.Of("a", 1, "b", 2), (acc, v, key) =>
+        var total = _.Reduce(Map.Of("a", 1, "b", 2), (int acc, DataValue v, StringOrInt key) =>
         {
-            seenKeys.Add(key);
-            return (int)acc + (int)v;
+            seenKeys.Add(key switch { string s => s, int i => i.ToString() });
+            return acc + (int)v.As<long>();
         }, 0);
 
         total.Should().Be(3);
-        seenKeys.Should().BeEquivalentTo(new object[] { "a", "b" });
+        seenKeys.Should().BeEquivalentTo("a", "b");
     }
 
     [Fact]
@@ -368,11 +452,11 @@ public sealed class Tests
         var expected = Map.Of(
             "a", Map.Of(
                 "x", 2,
-                "y", List.Of(null!, 4)
+                "y", List.Of(DataNull.Instance, 4)
             ));
 
         var diff = _.DiffObjects(data1, data2);
-        diff.Should().BeEquivalentTo(expected);
+        ShouldEqual(diff.As<DataMap>(), expected);
 
         // var empty = List.Of(1);
         // var ins = _.InsertAt(empty, 1, 4);
@@ -387,7 +471,7 @@ public sealed class Tests
         
         var res = _.DiffObjects(d1, d2);
         
-        res.Should().BeEquivalentTo(List.Of(null, 4));
+        ShouldEqual(res.As<DataList>(), List.Of(DataNull.Instance, 4));
 
     }
 
@@ -399,8 +483,9 @@ public sealed class Tests
         var before = Map.Of("status", "pending");
         var after = Map.Of("status", "no-diff");
 
-        _.DiffObjects(before, after)
-            .Should().BeEquivalentTo(Map.Of("status", "no-diff"));
+        ShouldEqual(
+            _.DiffObjects(before, after).As<DataMap>(),
+            Map.Of("status", "no-diff"));
     }
 
     [Fact]
@@ -413,7 +498,7 @@ public sealed class Tests
         // rather than BeOfType is how you get at the case.
         var changed = _.Diff("Watchmen", "The Watchmen") switch
         {
-            Changed(var value) => value,
+            Changed(var value) => value.As<string>(),
             NoDiff => null
         };
         changed.Should().Be("The Watchmen");
@@ -455,7 +540,7 @@ public sealed class Tests
         // next changes only the publication year...
         var diff1 = _.DiffObjects(previous, next);
 
-        diff1.Should().BeEquivalentTo(
+        ShouldEqual(diff1.As<DataMap>(),
             Map.Of("catalog", Map.Of(
                 "booksByIsbn", Map.Of(
                     "978-1779501127", Map.Of(
@@ -464,7 +549,7 @@ public sealed class Tests
         // ...while current changes the title and one author's name.
         var diff2 = _.DiffObjects(previous, current);
 
-        diff2.Should().BeEquivalentTo(
+        ShouldEqual(diff2.As<DataMap>(),
             Map.Of("catalog", Map.Of(
                 "booksByIsbn", Map.Of(
                     "978-1779501127", Map.Of(

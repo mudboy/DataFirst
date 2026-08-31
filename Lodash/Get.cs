@@ -1,36 +1,34 @@
 namespace DataFirst.Lodash;
 
-
-public union StringOrInt(string, int);
-
 public static partial class _
 {
-
-    
-    public static T Get<T>(object map, StringOrInt key) =>
-        (T)Get(map, [key]);
-
-    public static T Get<T>(object map, List<StringOrInt> keyPath) =>
-        (T)Get(map, keyPath);
-
-    public static object Get(object obj, List<StringOrInt> keyPath)
-    {
-        return keyPath switch
+    /// Reads the value at a single key or index.
+    public static DataValue Get(DataValue obj, StringOrInt key) =>
+        (obj, key) switch
         {
-            [] => obj,
-            [var k] => Get(obj, k),
-            [var k, .. var rest] => Get(Get(obj, k), rest)
+            (DataMap m, string k) => m[k],
+            (DataList l, _) when key.TryAsIndex(out var i) => l[i],
+            (DataMap, int i) => throw new InvalidOperationException(
+                $"Cannot index a map with {i}; maps are keyed by string"),
+            (DataList, string s) => throw new InvalidOperationException(
+                $"Cannot index a list with key '{s}'; list indices must be numeric"),
+            _ => throw new InvalidOperationException(
+                $"Cannot read {key.Describe()} from a {obj.Describe()}")
         };
+
+    /// Walks a path of keys and indices. An empty path returns the value unchanged.
+    public static DataValue Get(DataValue obj, IReadOnlyList<StringOrInt> path)
+    {
+        var current = obj;
+        foreach (var key in path) current = Get(current, key);
+        return current;
     }
 
-    public static object Get(object obj, StringOrInt key)
-    {
-        return (obj, key) switch
-        {
-            (StringMap m, string k) => m[k],
-            (IndexedList l, int i) => l[i],
-            (IndexedList l, string si) => l[int.Parse(si)],
-            _ => throw new Exception($"Unknown combo: {obj.GetType()} :: {key.GetType()}")
-        };
-    }
+    /// Like Get, but yields null rather than throwing when the key is absent.
+    public static DataValue GetOrNull(DataValue obj, StringOrInt key) =>
+        ContainsKey(obj, key) ? Get(obj, key) : DataNull.Instance;
+
+    public static T Get<T>(DataValue obj, StringOrInt key) => Get(obj, key).As<T>();
+
+    public static T Get<T>(DataValue obj, IReadOnlyList<StringOrInt> path) => Get(obj, path).As<T>();
 }

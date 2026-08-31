@@ -1,95 +1,67 @@
-using System.Collections.Immutable;
-using System.Diagnostics;
-
 namespace DataFirst.Lodash;
 
 public static partial class _
 {
-    public static IndexedList Map<T>(object obj, Func<T, object> f) =>
-        obj switch
+    /// Maps over a list's values or a map's values, always producing a list
+    /// (as lodash does).
+    public static DataList Map(DataValue coll, Func<DataValue, DataValue> f) =>
+        coll switch
         {
-            StringMap m => m.Select(pair => f((T)pair.Value)).ToImmutableList(),
-            IndexedList l => l.Select(x => f((T)x)).ToImmutableList(),
-            _ => throw new Exception($"Can't Map type {obj.GetType()}")
+            DataMap m => DataList.Create(m.Values.Select(f)),
+            DataList l => DataList.Create(l.Select(f)),
+            _ => throw new InvalidOperationException($"Cannot Map over a {coll.Describe()}")
         };
 
-    public static ImmutableList<T> Filter<T>(ImmutableList<T> list, Func<T, bool> predicate) 
-        => list.Where(predicate).ToImmutableList();
-    
-    public static IndexedList AggregateFields(IndexedList rows, string idFieldName, string fieldName,
-        string aggregateFieldName)
-    {
-        var rowsByIdField = _.GroupBy(rows, idFieldName);
-        var groupedRows = _.Values(rowsByIdField);
-        return _.Map<IndexedList>(groupedRows, x => AggregateField(x, fieldName, aggregateFieldName));
-    }
-    
-    public static StringMap AggregateField(IndexedList rows, string fieldName, string newName)
-    {
-        var aggregatedValues = _.Map<object>(rows, x => _.Get(x, fieldName));
-        var firstRow = rows[0];
-        var firstRowWithAggregatedValues = (StringMap)_.Set(firstRow, newName, aggregatedValues);
-        return firstRowWithAggregatedValues.Remove(fieldName);
-    }
+    public static DataList Filter(DataList list, Func<DataValue, bool> predicate) =>
+        DataList.Create(list.Where(predicate));
 
-    public static IndexedList Keys(object obj)
-    {
-        return obj switch
-        { 
-            StringMap m => m.Keys.ToImmutableList<object>(),
-            IndexedList l => Enumerable.Range(0, l.Count)
-                .Select(x => x.ToString()).ToImmutableList<object>(),
-            _ => throw new Exception("Unknown type")
-        };
-    }
-
-    public static bool IsObject(object obj) =>
+    /// The keys of a map, or the indices of a list.
+    public static IReadOnlyList<StringOrInt> Keys(DataValue obj) =>
         obj switch
         {
-            StringMap => true,
-            IndexedList => true,
-            _ => false
+            DataMap m => m.Keys.Select(k => (StringOrInt)k).ToList(),
+            DataList l => Enumerable.Range(0, l.Count).Select(i => (StringOrInt)i).ToList(),
+            _ => throw new InvalidOperationException($"A {obj.Describe()} has no keys")
         };
 
-    public static bool IsEmpty(object obj) => 
+    /// True for the composite cases -- the things a path can descend into.
+    public static bool IsObject(DataValue obj) => obj.IsComposite();
+
+    public static bool IsEmpty(DataValue obj) =>
         obj switch
         {
-            StringMap m => m.IsEmpty,
-            IndexedList l=> l.IsEmpty,
+            DataMap m => m.IsEmpty,
+            DataList l => l.IsEmpty,
             _ => true
         };
 
-    public static IndexedList Union(IndexedList l1, IndexedList l2) => l1.Union(l2).ToImmutableList();
+    public static IReadOnlyList<StringOrInt> Union(
+        IReadOnlyList<StringOrInt> first, IReadOnlyList<StringOrInt> second) =>
+        first.Concat(second).Distinct().ToList();
 
-    public static object Reduce(object obj, Func<object, object, object, object> f, object initial)
-    {
-        return obj switch
+    /// Folds over a list's values (with each index) or a map's values (with each key).
+    public static TAcc Reduce<TAcc>(DataValue coll, Func<TAcc, DataValue, StringOrInt, TAcc> f, TAcc initial) =>
+        coll switch
         {
-            StringMap m => m.Aggregate(initial, (acc, pair) => f(acc, pair.Value, pair.Key)),
-            IndexedList l => l.Aggregate((acc: initial, index: 0),
-                (state, v) => (f(state.acc, v, state.index), state.index + 1)).acc,
-            _ => throw new Exception($"Can't Reduce type {obj.GetType()}")
+            DataMap m => m.Aggregate(initial, (acc, pair) => f(acc, pair.Value, pair.Key)),
+            DataList l => l.Select((value, index) => (value, index))
+                .Aggregate(initial, (acc, item) => f(acc, item.value, item.index)),
+            _ => throw new InvalidOperationException($"Cannot Reduce a {coll.Describe()}")
         };
+
+    /// Collapses rows sharing an id into one row, gathering fieldName into a list.
+    public static DataList AggregateFields(
+        DataList rows, string idFieldName, string fieldName, string aggregateFieldName)
+    {
+        var rowsByIdField = GroupBy(rows, idFieldName);
+        var groupedRows = Values(rowsByIdField);
+        return Map(groupedRows, group => AggregateField(group.As<DataList>(), fieldName, aggregateFieldName));
+    }
+
+    public static DataMap AggregateField(DataList rows, string fieldName, string newName)
+    {
+        var aggregatedValues = Map(rows, row => Get(row, fieldName));
+        var firstRow = rows[0].As<DataMap>();
+        return firstRow.SetItem(newName, aggregatedValues).Remove(fieldName);
     }
 }
-
-public static class Getter
-{
-    public static Getter<T> Create<T>(string key) => new KeyGetter<T>(key);
-    public static Getter<T> Create<T>(List<StringOrInt> keyPath) => new PathGetter<T>(keyPath);
-}
-
-public interface Getter<out T>
-{
-    public T Get(StringMap map);
-}
-
-internal sealed record KeyGetter<T>(string Key) : Getter<T>
-{
-    public T Get(StringMap map) => _.Get<T>(map, Key);
-}
-
-internal sealed record PathGetter<T>(List<StringOrInt> keyPath) : Getter<T>
-{
-    public T Get(StringMap map) => _.Get<T>(map, keyPath);
-} 

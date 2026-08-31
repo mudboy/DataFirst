@@ -2,32 +2,50 @@ namespace DataFirst.Lodash;
 
 public static partial class _
 {
-    public static StringMap Set(StringMap map, string key, object value) => map.SetItem(key, value);
-
-    public static object Set(object obj, List<StringOrInt> path, object v) =>
-        path switch
+    /// Writes a value at a single key or index, returning a new structure.
+    public static DataValue Set(DataValue obj, StringOrInt key, DataValue value) =>
+        (obj, key) switch
         {
-            [] => obj,
-            [.. var p] => DoSet(obj, p, v)
+            (DataMap m, string k) => m.SetItem(k, value),
+            (DataList l, _) when key.TryAsIndex(out var i) => SetAt(l, i, value),
+            (DataMap, int i) => throw new InvalidOperationException(
+                $"Cannot index a map with {i}; maps are keyed by string"),
+            (DataList, string s) => throw new InvalidOperationException(
+                $"Cannot index a list with key '{s}'; list indices must be numeric"),
+            _ => throw new InvalidOperationException(
+                $"Cannot write {key.Describe()} into a {obj.Describe()}")
         };
 
-    public static object Set(object obj, StringOrInt key, object v) => DoSet(obj, [key], v);
-
-    private static object DoSet(object obj, List<StringOrInt> path, object v)
+    /// Writes a value at a path, rebuilding each node along the way.
+    /// An empty path replaces the whole structure.
+    public static DataValue Set(DataValue obj, IReadOnlyList<StringOrInt> path, DataValue value)
     {
-        var (k, restOfPath) = path switch { [var h, .. var rest] => (h, rest) };
-        var modifiedNode = v;
-        if (restOfPath.Count > 0)
-        {
-            modifiedNode = Set(Get(obj, k), restOfPath, v);
-        }
+        if (path.Count == 0) return value;
 
-        return (obj, k) switch
-        {
-            (StringMap m, string key) => m.SetItem(key, modifiedNode),
-            (IndexedList l, int idx) => SetAt(l, idx, modifiedNode),
-            (IndexedList l, string si) when int.TryParse(si, out var ii) => SetAt(l, ii, modifiedNode),
-            _ => throw new Exception($"Can't set value of type {obj.GetType()} with key of type {k.GetType()}")
-        };
+        var key = path[0];
+        if (path.Count == 1) return Set(obj, key, value);
+
+        var rest = path.Skip(1).ToList();
+        return Set(obj, key, Set(Get(obj, key), rest, value));
     }
+
+    public static DataMap Set(DataMap map, StringOrInt key, DataValue value) =>
+        Set((DataValue)map, key, value).As<DataMap>();
+
+    public static DataMap Set(DataMap map, IReadOnlyList<StringOrInt> path, DataValue value) =>
+        Set((DataValue)map, path, value).As<DataMap>();
+
+    /// Replaces the element at index, or extends the list (padding with nulls)
+    /// when index is past the end. Unlike InsertAt this never grows a list whose
+    /// index already exists.
+    public static DataList SetAt(DataList list, int index, DataValue value) =>
+        index < list.Count
+            ? list.SetItem(index, value)
+            : list.PadTo(index).Add(value);
+
+    /// Inserts before the element at index, growing the list.
+    public static DataList InsertAt(DataList list, int index, DataValue value) =>
+        index <= list.Count
+            ? list.Insert(index, value)
+            : list.PadTo(index).Add(value);
 }

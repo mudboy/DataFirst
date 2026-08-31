@@ -2,9 +2,10 @@ namespace DataFirst.Lodash;
 
 public static partial class _
 {
-    public static IndexedList Unwind(StringMap map, string key)
+    /// Expands a map holding a list at key into one map per element.
+    public static DataList Unwind(DataMap map, string key)
     {
-        var arr = Get<IndexedList>(map, key);
-        return _.Map<StringMap>(arr, elem => _.Set(map, key, elem));
+        var elements = Get<DataList>(map, key);
+        return DataList.Create(elements.Select(element => (DataValue)map.SetItem(key, element)));
     }
 }

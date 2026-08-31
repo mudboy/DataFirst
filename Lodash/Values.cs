@@ -1,8 +1,6 @@
-using System.Collections.Immutable;
-
 namespace DataFirst.Lodash;
 
 public static partial class _
 {
-    public static IndexedList Values(StringMap map) => map.Values.ToImmutableList();
+    public static DataList Values(DataMap map) => DataList.Create(map.Values);
 }
