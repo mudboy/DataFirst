@@ -67,4 +67,24 @@ public static class Library
         var results = Catalog.SearchBooksByTitle(_.Get<DataMap>(libraryData, "catalog"), query);
         return DataJson.Serialize(results);
     }
+
+    /// The boundary: a request arrives as generic data and is checked against a
+    /// schema before anything downstream trusts its shape. Inside the boundary the
+    /// data stays generic -- validation buys confidence, not a type.
+    public static string SearchBooksJson(DataMap libraryData, DataMap request)
+    {
+        Validation.ValidateOrThrow(Schemas.SearchRequest, request);
+
+        var results = Catalog.SearchBooksByTitle(
+            _.Get<DataMap>(libraryData, "catalog"),
+            _.Get<string>(request, "title"));
+
+        if (!request.ContainsKey("fields")) return DataJson.Serialize(results);
+
+        var fields = _.Get<DataList>(request, "fields").Select(f => f.As<string>()).ToList();
+        var projected = _.Map(results, book => (DataValue)Map.Of(
+            [.. fields.SelectMany(f => new DataValue[] { f, _.Get(book, f) })]));
+
+        return DataJson.Serialize(projected);
+    }
 }

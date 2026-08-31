@@ -32,6 +32,10 @@ public sealed class DataPath : IEquatable<DataPath>, IReadOnlyList<StringOrInt>
     /// A new path with one more step on the end.
     public DataPath Then(StringOrInt step) => new([.. steps, step]);
 
+    /// A new path with another path appended, for re-rooting an error reported
+    /// against a nested value onto the whole structure.
+    public DataPath Then(DataPath suffix) => new([.. steps, .. suffix.steps]);
+
     public bool Equals(DataPath? other)
     {
         if (ReferenceEquals(this, other)) return true;

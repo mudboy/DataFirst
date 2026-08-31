@@ -625,6 +625,163 @@ public sealed class Tests
     }
 
     [Fact]
+    public void Should_Accept_The_Real_Library_Data()
+    {
+        Validation.Validate(Schemas.LibraryData, Library.LibraryData).Errors()
+            .Should().BeEmpty();
+
+        Schemas.ValidateCatalog(_.Get<DataMap>(Library.LibraryData, "catalog")).Errors()
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Should_Report_Every_Error_With_Its_Path()
+    {
+        var book = Map.Of(
+            "isbn", "nope",
+            "title", "",
+            "publicationYear", 3000,
+            "authorIds", List.Of());
+
+        var errors = Validation.Validate(Schemas.Book, book).Errors()
+            .Select(e => e.ToString()).ToList();
+
+        // Every problem, not just the first.
+        errors.Should().HaveCount(4);
+        errors.Should().Contain(e => e.StartsWith("isbn:") && e.Contains("must match"));
+        errors.Should().Contain(e => e.StartsWith("title:") && e.Contains("at least 1 characters"));
+        errors.Should().Contain(e => e.StartsWith("publicationYear:") && e.Contains("at most 2100"));
+        errors.Should().Contain(e => e.StartsWith("authorIds:") && e.Contains("at least 1 items"));
+    }
+
+    [Fact]
+    public void Should_Report_A_Missing_Required_Field()
+    {
+        var errors = Validation.Validate(Schemas.Book, Map.Of("title", "Watchmen")).Errors();
+
+        errors.Select(e => e.ToString()).Should().BeEquivalentTo(
+            "isbn: is required but missing",
+            "authorIds: is required but missing");
+    }
+
+    [Fact]
+    public void Should_Path_Errors_Through_Nested_Structures()
+    {
+        var book = Map.Of(
+            "isbn", "978-1779501127",
+            "title", "Watchmen",
+            "authorIds", List.Of("alan-moore"),
+            "bookItems", List.Of(
+                Map.Of("id", "book-item-1", "libId", "nyc", "isLent", false),
+                Map.Of("id", "book-item-2", "libId", "nyc", "isLent", "no")));
+
+        Validation.Validate(Schemas.Book, book).Errors().Single().ToString()
+            .Should().Be("bookItems.[1].isLent: expected boolean, but found string");
+    }
+
+    [Fact]
+    public void Should_Path_Errors_Through_Id_Keyed_Collections()
+    {
+        var catalog = Map.Of(
+            "booksByIsbn", Map.Of(
+                "978-1779501127", Map.Of(
+                    "isbn", "978-1779501127",
+                    "title", "Watchmen",
+                    "authorIds", List.Of("alan-moore", "alan-moore"))),
+            "authorsById", Map.Of());
+
+        Schemas.ValidateCatalog(catalog).Errors().Single().ToString()
+            .Should().Be("booksByIsbn.978-1779501127.authorIds: must not contain duplicates");
+    }
+
+    [Fact]
+    public void Should_Reject_Properties_The_Schema_Does_Not_Name()
+    {
+        var author = Map.Of(
+            "name", "Alan Moore",
+            "bookIsbns", List.Of("978-1779501127"),
+            "favouriteColour", "black");
+
+        Schemas.ValidateCatalog(Map.Of(
+                "booksByIsbn", Map.Of(),
+                "authorsById", Map.Of("alan-moore", author)))
+            .Errors().Single().ToString()
+            .Should().Be("authorsById.alan-moore.favouriteColour: is not a permitted property");
+    }
+
+    [Fact]
+    public void Should_Ignore_Keywords_That_Do_Not_Apply_To_The_Value()
+    {
+        // minimum says nothing about a string, as in JSON Schema.
+        var schema = Map.Of("minimum", 10, "minLength", 2);
+
+        Validation.Validate(schema, "ab").IsValid().Should().BeTrue();
+        Validation.Validate(schema, 20).IsValid().Should().BeTrue();
+        Validation.Validate(schema, 5).IsValid().Should().BeFalse();
+        Validation.Validate(schema, "a").IsValid().Should().BeFalse();
+    }
+
+    [Fact]
+    public void Should_Support_Unions_Of_Types_And_Schemas()
+    {
+        var nullableIsbn = Map.Of("type", List.Of("string", "null"));
+
+        Validation.Validate(nullableIsbn, "978-1779501127").IsValid().Should().BeTrue();
+        Validation.Validate(nullableIsbn, DataNull.Instance).IsValid().Should().BeTrue();
+        Validation.Validate(nullableIsbn, 1987).IsValid().Should().BeFalse();
+
+        var stringOrCount = Map.Of("anyOf", List.Of(
+            Map.Of("type", "string"),
+            Map.Of("type", "integer", "minimum", 0)));
+
+        Validation.Validate(stringOrCount, "x").IsValid().Should().BeTrue();
+        Validation.Validate(stringOrCount, 3).IsValid().Should().BeTrue();
+        Validation.Validate(stringOrCount, -1).IsValid().Should().BeFalse();
+    }
+
+    [Fact]
+    public void Should_Validate_A_Request_At_The_Boundary()
+    {
+        var request = Map.Of("title", "Watchmen", "fields", List.Of("title", "isbn"));
+
+        Library.SearchBooksJson(Library.LibraryData, request)
+            .Should().Be("""[{"title":"Watchmen","isbn":"978-1779501127"}]""");
+    }
+
+    [Fact]
+    public void Should_Reject_A_Malformed_Request_At_The_Boundary()
+    {
+        var badRequest = Map.Of("title", "", "fields", List.Of("title", "publisher"));
+
+        var search = () => Library.SearchBooksJson(Library.LibraryData, badRequest);
+
+        search.Should().Throw<SchemaViolationException>()
+            .Which.Errors.Select(e => e.ToString()).Should().BeEquivalentTo(
+                "title: must be at least 1 characters, but was 0",
+                "fields.[1]: must be one of [\"title\",\"isbn\",\"authorNames\"], but was \"publisher\"");
+    }
+
+    [Fact]
+    public void Should_Treat_A_Schema_As_Data()
+    {
+        // The point of principle 4: a schema is a value. It can be built from parts,
+        // diffed, and changed without touching a type.
+        var strict = _.Set(Schemas.Book, ["properties", "title", "minLength"], 5).As<DataMap>();
+
+        Validation.Validate(Schemas.Book, Map.Of(
+            "isbn", "978-1779501127", "title", "Wat", "authorIds", List.Of("a"))).IsValid()
+            .Should().BeTrue();
+
+        Validation.Validate(strict, Map.Of(
+            "isbn", "978-1779501127", "title", "Wat", "authorIds", List.Of("a"))).IsValid()
+            .Should().BeFalse();
+
+        ShouldEqual(
+            _.DiffObjects(Schemas.Book, strict),
+            Map.Of("properties", Map.Of("title", Map.Of("minLength", 5))));
+    }
+
+    [Fact]
     public void DiffyLoop()
     {
         var watchmen = Map.Of(
