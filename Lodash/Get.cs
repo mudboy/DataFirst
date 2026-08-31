@@ -1,11 +1,7 @@
 namespace DataFirst.Lodash;
 
 
-public union StringOrInt(string, int)
-{
-public static implicit operator StringOrInt(int x) => x;
-public static implicit operator StringOrInt(string x) => x; 
-}
+public union StringOrInt(string, int);
 
 public static partial class _
 {

@@ -70,8 +70,9 @@ public static partial class _
 
         var keys = _.Union(_.Keys(data1), _.Keys(data2));
 
-        return keys.Aggregate(emptyObject, (acc, k) =>
+        return keys.Aggregate(emptyObject, (acc, kObj) =>
         {
+            var k = (string)kObj;
             var res = _.Diff(Get(data1, k), Get(data2, k));
             if ((IsObject(res) && IsEmpty(res)) || res.Equals("no-diff"))
             {
