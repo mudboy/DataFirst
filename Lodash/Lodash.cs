@@ -99,7 +99,9 @@ public static partial class _
         return obj switch
         {
             StringMap m => m.Aggregate(initial, (acc, pair) => f(acc, pair.Value, pair.Key)),
-            IndexedList l => l.Aggregate((initial, 0), (acc, v) => (f(acc.initial, v, acc.Item2), acc.Item2++)).initial
+            IndexedList l => l.Aggregate((acc: initial, index: 0),
+                (state, v) => (f(state.acc, v, state.index), state.index + 1)).acc,
+            _ => throw new Exception($"Can't Reduce type {obj.GetType()}")
         };
     }
 }

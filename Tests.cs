@@ -265,6 +265,80 @@ public sealed class Tests
     }
 
     [Fact]
+    public void Should_Replace_Not_Insert_When_Setting_An_Existing_Index()
+    {
+        var authorIds = List.Of("alan-moore", "dave-gibbons");
+
+        var result = (IndexedList)_.Set(authorIds, 1, "dave-chester-gibbons");
+
+        result.Should().BeEquivalentTo(List.Of("alan-moore", "dave-chester-gibbons"),
+            o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public void Should_Replace_Nested_List_Item_On_Set()
+    {
+        var books = Map.Of(
+            "978-1779501127", Map.Of(
+                "authorIds", List.Of("alan-moore", "dave-gibbons")));
+
+        var updated = _.Set(books, ["978-1779501127", "authorIds", 1], "dave-chester-gibbons");
+
+        _.Get<IndexedList>(updated, ["978-1779501127", "authorIds"])
+            .Should().BeEquivalentTo(List.Of("alan-moore", "dave-chester-gibbons"),
+                o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public void Should_Pad_With_Nulls_When_Setting_Past_The_End()
+    {
+        var result = (IndexedList)_.Set(List.Of("first"), 3, "fourth");
+
+        result.Should().BeEquivalentTo(List.Of("first", null!, null!, "fourth"),
+            o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public void Should_Insert_Rather_Than_Replace_With_InsertAt()
+    {
+        _.InsertAt(List.Of(1), 1, 4)
+            .Should().BeEquivalentTo(List.Of(1, 4), o => o.WithStrictOrdering());
+
+        _.InsertAt(List.Of("a", "c"), 1, "b")
+            .Should().BeEquivalentTo(List.Of("a", "b", "c"), o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public void Should_Reduce_A_List_With_Increasing_Indexes()
+    {
+        var seenIndexes = new System.Collections.Generic.List<object>();
+
+        var total = _.Reduce(List.Of(10, 20, 30), (acc, v, idx) =>
+        {
+            seenIndexes.Add(idx);
+            return (int)acc + (int)v;
+        }, 0);
+
+        total.Should().Be(60);
+        seenIndexes.Should().BeEquivalentTo(new object[] { 0, 1, 2 }, o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public void Should_Reduce_A_Map_With_Its_Keys()
+    {
+        var seenKeys = new System.Collections.Generic.List<object>();
+
+        var total = _.Reduce(Map.Of("a", 1, "b", 2), (acc, v, key) =>
+        {
+            seenKeys.Add(key);
+            return (int)acc + (int)v;
+        }, 0);
+
+        total.Should().Be(3);
+        seenKeys.Should().BeEquivalentTo(new object[] { "a", "b" });
+    }
+
+    [Fact]
     public void Should_Add_Non_Existent_Items_On_Set()
     {
         var map = Map.Of("key", "value");

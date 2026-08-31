@@ -25,8 +25,8 @@ public static partial class _
         return (obj, k) switch
         {
             (StringMap m, string key) => m.SetItem(key, modifiedNode),
-            (IndexedList l, int idx) => InsertAt(l, idx, modifiedNode),
-            (IndexedList l, string si) when int.TryParse(si, out var ii) => InsertAt(l, ii, modifiedNode),
+            (IndexedList l, int idx) => SetAt(l, idx, modifiedNode),
+            (IndexedList l, string si) when int.TryParse(si, out var ii) => SetAt(l, ii, modifiedNode),
             _ => throw new Exception($"Can't set value of type {obj.GetType()} with key of type {k.GetType()}")
         };
     }
