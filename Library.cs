@@ -6,6 +6,29 @@ namespace DataFirst;
 public static class Library
 {
 
+    /// Passwords are hashed once, when this data is first built.
+    private static readonly DataMap UserManagementSeed =
+        Map.Of(
+            "librarians", Map.Of(
+                "franck@gmail.com", Map.Of(
+                    "email", "franck@gmail.com",
+                    "password", Passwords.Hash("librarian-secret"))),
+            "members", Map.Of(
+                "samantha@gmail.com", Map.Of(
+                    "email", "samantha@gmail.com",
+                    "password", Passwords.Hash("member-secret"),
+                    "isBlocked", false,
+                    "isSuper", true,
+                    "bookLendings", List.Of(
+                        Map.Of(
+                            "bookItemId", "book-item-1",
+                            "bookIsbn", "978-1779501127",
+                            "lendingDate", "2020-04-23"))),
+                "vip@gmail.com", Map.Of(
+                    "email", "vip@gmail.com",
+                    "password", Passwords.Hash("vip-secret"),
+                    "isVip", true)));
+
     public static DataMap LibraryData =
         Map.Of("catalog",
             Map.Of(
@@ -39,7 +62,7 @@ public static class Library
                         "bookIsbns", List.Of("978-1779501127")
                     )
                 )
-            ), "userManagementData", Map.Of());
+            ), "userManagementData", UserManagementSeed);
 
     public static DataMap SearchBook(DataMap libraryData, DataMap searchQuery) =>
         Catalog.SearchBook(_.Get<DataMap>(libraryData, "catalog"), searchQuery);
