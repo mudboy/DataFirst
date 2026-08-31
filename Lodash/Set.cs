@@ -26,7 +26,21 @@ public static partial class _
         if (path.Count == 1) return Set(obj, key, value);
 
         var rest = path.Skip(1).ToList();
-        return Set(obj, key, Set(Get(obj, key), rest, value));
+        return Set(obj, key, Set(Descend(obj, key, rest[0]), rest, value));
+    }
+
+    /// The node at key, or a new empty container when there is nothing there yet, so
+    /// a path can be written into a structure that does not have it. The following
+    /// step decides which container: a name makes a map, an index makes a list.
+    ///
+    /// Without this, merging a diff that introduces a nested value throws, because
+    /// the descent walks through a key the target does not have.
+    private static DataValue Descend(DataValue obj, StringOrInt key, StringOrInt nextStep)
+    {
+        if (ContainsKey(obj, key) && Get(obj, key) is var existing and not DataNull)
+            return existing;
+
+        return nextStep is int ? DataList.Empty : DataMap.Empty;
     }
 
     public static DataMap Set(DataMap map, StringOrInt key, DataValue value) =>

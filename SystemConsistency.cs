@@ -19,10 +19,13 @@ public static class SystemConsistency
     /// When nothing else has been committed since the mutation read `previous`, the
     /// mutation's own result stands. Otherwise the two sets of changes are merged,
     /// provided they touched different places.
-    public static DataMap Reconcile(DataMap current, DataMap previous, DataMap next) =>
+    public static DataValue Reconcile(DataValue current, DataValue previous, DataValue next) =>
         current.Equals(previous)
             ? next // fast forward: nothing happened in between
-            : ThreeWayMerge(current, previous, next);
+            : ThreeWayMerge(current.As<DataMap>(), previous.As<DataMap>(), next.As<DataMap>());
+
+    public static DataMap Reconcile(DataMap current, DataMap previous, DataMap next) =>
+        Reconcile((DataValue)current, previous, next).As<DataMap>();
 
     private static DataMap ThreeWayMerge(DataMap current, DataMap previous, DataMap next)
     {

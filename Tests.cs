@@ -1121,6 +1121,214 @@ public sealed class Tests
                     "id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)))))));
     }
 
+    private static DataMap TwoBookLibrary => _.Set(
+        Library.LibraryData,
+        ["catalog", "booksByIsbn", "978-1982137274"],
+        Map.Of(
+            "isbn", "978-1982137274",
+            "title", "7 Habits of Highly Effective People",
+            "publicationYear", 2020,
+            "authorIds", List.Of("alan-moore")));
+
+    [Fact]
+    public void Should_Not_Contend_Across_Aggregates()
+    {
+        var state = new SystemState(TwoBookLibrary);
+        var start = state.Get();
+
+        var watchmen = Aggregates.Book("978-1779501127");
+        var habits = Aggregates.Book("978-1982137274");
+
+        // Two changes calculated from the same version, in different aggregates.
+        var newWatchmen = _.Set(_.Get(start, watchmen), "publicationYear", 1986);
+        var newHabits = _.Set(_.Get(start, habits), "publicationYear", 2021);
+
+        state.Commit(watchmen, _.Get(start, watchmen), newWatchmen);
+        state.Commit(habits, _.Get(start, habits), newHabits);
+
+        var after = state.Get();
+        _.Get<long>(after, [.. watchmen, "publicationYear"]).Should().Be(1986);
+        _.Get<long>(after, [.. habits, "publicationYear"]).Should().Be(2021);
+    }
+
+    [Fact]
+    public void Should_Merge_Disjoint_Changes_Within_One_Aggregate()
+    {
+        var state = new SystemState(Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+        var start = _.Get(state.Get(), book);
+
+        state.Commit(book, start, _.Set(start, "publicationYear", 1986));
+        state.Commit(book, start, _.Set(start, "title", "The Watchmen"));
+
+        var after = _.Get(state.Get(), book);
+        _.Get<long>(after, "publicationYear").Should().Be(1986);
+        _.Get<string>(after, "title").Should().Be("The Watchmen");
+    }
+
+    [Fact]
+    public void Should_Still_Conflict_Within_One_Aggregate()
+    {
+        var state = new SystemState(Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+        var start = _.Get(state.Get(), book);
+
+        state.Commit(book, start, _.Set(start, "title", "The Watchmen"));
+
+        var second = () => state.Commit(book, start, _.Set(start, "title", "Watchmen!"));
+
+        second.Should().Throw<ConcurrentModificationException>()
+            .Which.ConflictingPaths.Single().ToString().Should().Be("title");
+    }
+
+    [Fact]
+    public void Should_Commit_An_Aggregate_That_Does_Not_Exist_Yet()
+    {
+        var state = new SystemState(Library.LibraryData);
+        var newBook = Aggregates.Book("978-0000000001");
+
+        // Nothing there yet, so the previous value is null rather than an error.
+        (state.Read(newBook) is DataNull).Should().BeTrue();
+
+        state.Commit(newBook, DataNull.Instance, Map.Of(
+            "isbn", "978-0000000001", "title", "New", "authorIds", List.Of("alan-moore")));
+
+        _.Get<string>(state.Get(), [.. newBook, "title"]).Should().Be("New");
+    }
+
+    [Fact]
+    public void Should_Read_Only_The_Aggregate_A_Caller_Needs()
+    {
+        var state = new SystemState(Library.LibraryData);
+
+        // A caller changing a book never has to hold the whole system -- which is
+        // the property that makes this work over a network.
+        var book = state.Read(Aggregates.Book("978-1779501127")).As<DataMap>();
+
+        book.Keys.Should().Contain("title");
+        book.ContainsKey("userManagementData").Should().BeFalse();
+
+        state.Commit(Aggregates.Book("978-1779501127"), book, _.Set(book, "publicationYear", 1986));
+
+        _.Get<long>(state.Get(), ["catalog", "booksByIsbn", "978-1779501127", "publicationYear"])
+            .Should().Be(1986);
+    }
+
+    [Fact]
+    public void Should_Scope_Library_Writes_To_One_Aggregate()
+    {
+        var system = new LibrarySystem(Library.LibraryData);
+
+        var updated = system.AddBookItem("franck@gmail.com", Map.Of(
+            "isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib"));
+
+        // Only the book changed -- the commit had no opinion about anything else.
+        ShouldEqual(
+            _.DiffObjects(Library.LibraryData, updated),
+            Map.Of("catalog", Map.Of("booksByIsbn", Map.Of("978-1779501127", Map.Of(
+                "bookItems", Map.Of("2", Map.Of(
+                    "id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)))))));
+    }
+
+    [Fact]
+    public void Should_Keep_Reads_And_Writes_Consistent_Through_The_System_Layer()
+    {
+        var system = new LibrarySystem(Library.LibraryData);
+
+        TitlesOf(system.GetBookLendings("franck@gmail.com", "samantha@gmail.com"))
+            .Should().Equal("Watchmen");
+
+        system.BlockMember("franck@gmail.com", "samantha@gmail.com");
+
+        var users = _.Get<DataMap>(system.Snapshot(), "userManagementData");
+        UserManagement.IsBlocked(users, "samantha@gmail.com").Should().BeTrue();
+
+        // Permission checks still apply at the system layer.
+        var notALibrarian = () => system.BlockMember("vip@gmail.com", "samantha@gmail.com");
+        notALibrarian.Should().Throw<Exception>().WithMessage("Not allowed to block members");
+    }
+
+    [Fact]
+    public void Should_Add_A_Member_Through_The_System_Layer()
+    {
+        var system = new LibrarySystem(Library.LibraryData);
+
+        system.AddMember("franck@gmail.com", Map.Of(
+            "email", "new@gmail.com",
+            "password", Passwords.Hash("new-secret", 1000)));
+
+        var users = _.Get<DataMap>(system.Snapshot(), "userManagementData");
+        UserManagement.IsMember(users, "new@gmail.com").Should().BeTrue();
+
+        // The seed value is untouched: the store holds the new version, not the old one.
+        UserManagement.IsMember(
+            _.Get<DataMap>(Library.LibraryData, "userManagementData"), "new@gmail.com")
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void Should_Survive_Parallel_Writes_To_Different_Books()
+    {
+        const int books = 12;
+
+        var seed = Enumerable.Range(0, books).Aggregate(
+            Library.LibraryData,
+            (data, i) => _.Set(data, ["catalog", "booksByIsbn", $"978-000000000{i}"], Map.Of(
+                "isbn", $"978-000000000{i}",
+                "title", $"Book {i}",
+                "authorIds", List.Of("alan-moore"))));
+
+        var system = new LibrarySystem(seed);
+
+        Parallel.For(0, books, i =>
+            system.AddBookItem("franck@gmail.com", Map.Of(
+                "isbn", $"978-000000000{i}",
+                "id", $"item-{i}",
+                "libId", "brooklyn-lib")));
+
+        var final = system.Snapshot();
+        for (var i = 0; i < books; i++)
+        {
+            var items = _.Get<DataList>(final,
+                ["catalog", "booksByIsbn", $"978-000000000{i}", "bookItems"]);
+            items.Select(item => _.Get<string>(item, "id")).Should().Equal($"item-{i}");
+        }
+    }
+
+    [Fact]
+    public void Should_Merge_A_Diff_That_Introduces_A_Path()
+    {
+        // Reachable whenever two people edit one book and only one of them adds the
+        // first copy: the paths are disjoint, the merge is valid, and the descent
+        // walks through a key the target does not have.
+        var previous = Map.Of("book", Map.Of("title", "Watchmen"));
+        var next = Map.Of("book", Map.Of("title", "Watchmen", "items", List.Of(Map.Of("id", "a"))));
+
+        ShouldEqual(_.Merge(previous, _.DiffObjects(previous, next)), next);
+    }
+
+    [Fact]
+    public void Should_Create_Missing_Containers_When_Setting_A_Path()
+    {
+        // The following step decides the container: a name makes a map, an index a list.
+        ShouldEqual(
+            _.Set(Map.Of(), ["a", "b"], 1),
+            Map.Of("a", Map.Of("b", 1)));
+
+        ShouldEqual(
+            _.Set(Map.Of(), ["a", 0, "b"], 1),
+            Map.Of("a", List.Of(Map.Of("b", 1))));
+
+        // A null stands in for absent, so a diff can fill one in.
+        ShouldEqual(
+            _.Set(Map.Of("a", DataNull.Instance), ["a", "b"], 1),
+            Map.Of("a", Map.Of("b", 1)));
+
+        // A leaf part-way along is still an error, not something to overwrite.
+        var throughALeaf = () => _.Set(Map.Of("a", "leaf"), ["a", "b"], 1);
+        throughALeaf.Should().Throw<InvalidOperationException>();
+    }
+
     [Fact]
     public void DiffyLoop()
     {
