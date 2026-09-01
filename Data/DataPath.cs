@@ -36,6 +36,21 @@ public sealed class DataPath : IEquatable<DataPath>, IReadOnlyList<StringOrInt>
     /// against a nested value onto the whole structure.
     public DataPath Then(DataPath suffix) => new([.. steps, .. suffix.steps]);
 
+    /// True when two paths address overlapping data: equal, or one inside the other.
+    ///
+    /// Changing `items` and changing `items[1]` are not the same path, but they are
+    /// not independent either -- one replaces what the other is reaching into. Exact
+    /// set intersection misses that and lets both changes through.
+    public bool Overlaps(DataPath other)
+    {
+        var shared = Math.Min(steps.Length, other.steps.Length);
+
+        for (var i = 0; i < shared; i++)
+            if (!steps[i].Equals(other.steps[i])) return false;
+
+        return true;
+    }
+
     public bool Equals(DataPath? other)
     {
         if (ReferenceEquals(this, other)) return true;

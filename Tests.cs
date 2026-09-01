@@ -1219,15 +1219,244 @@ public sealed class Tests
     {
         var system = new LibrarySystem(Library.LibraryData);
 
-        var updated = system.AddBookItem("franck@gmail.com", Map.Of(
+        // The caller gets back the aggregate it changed, not the system.
+        var book = system.AddBookItem("franck@gmail.com", Map.Of(
             "isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib"));
 
-        // Only the book changed -- the commit had no opinion about anything else.
+        _.Get<DataList>(book, "bookItems").Select(i => _.Get<string>(i, "id"))
+            .Should().Equal("book-item-1", "book-item-2", "book-item-3");
+
+        // And nothing else in the system moved.
         ShouldEqual(
-            _.DiffObjects(Library.LibraryData, updated),
+            _.DiffObjects(Library.LibraryData, system.Snapshot()),
             Map.Of("catalog", Map.Of("booksByIsbn", Map.Of("978-1779501127", Map.Of(
                 "bookItems", Map.Of("2", Map.Of(
                     "id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)))))));
+    }
+
+    // ---- IAggregateStore: the two implementations must agree ----
+
+    public static TheoryData<string> StoreKinds => new() { "snapshot", "diff-indexed" };
+
+    private static IAggregateStore StoreOf(string kind, DataMap initial) =>
+        kind switch
+        {
+            "snapshot" => new SnapshotAggregateStore(initial),
+            "diff-indexed" => new DiffIndexedStore(initial),
+            _ => throw new ArgumentException(kind)
+        };
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Read_An_Aggregate_With_Its_Version(string kind)
+    {
+        var store = StoreOf(kind, Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+
+        var (value, version) = store.Read(book);
+
+        version.Should().Be(0);
+        _.Get<string>(value, "title").Should().Be("Watchmen");
+
+        // An aggregate that is not there reads as null at version 0, so creating one
+        // needs no separate code path.
+        var (missing, missingVersion) = store.Read(Aggregates.Book("978-0000000000"));
+        (missing is DataNull).Should().BeTrue();
+        missingVersion.Should().Be(0);
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Apply_A_Diff_And_Advance_The_Version(string kind)
+    {
+        var store = StoreOf(kind, Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+
+        var (before, version) = store.Read(book);
+        var after = _.Set(before, "publicationYear", 1986);
+
+        var committed = store.Commit(book, version, _.DiffObjects(before, after));
+
+        committed.Version.Should().Be(1);
+        _.Get<long>(committed.Value, "publicationYear").Should().Be(1986);
+        store.Read(book).Version.Should().Be(1);
+
+        // The title was never in the diff, so it survived.
+        _.Get<string>(store.Read(book).Value, "title").Should().Be("Watchmen");
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Merge_Two_Writers_On_Different_Paths(string kind)
+    {
+        var store = StoreOf(kind, Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+
+        // Both read the same version, then write.
+        var (start, version) = store.Read(book);
+
+        store.Commit(book, version, _.DiffObjects(start, _.Set(start, "publicationYear", 1986)));
+        var second = store.Commit(book, version, _.DiffObjects(start, _.Set(start, "title", "The Watchmen")));
+
+        second.Version.Should().Be(2);
+        _.Get<long>(second.Value, "publicationYear").Should().Be(1986);
+        _.Get<string>(second.Value, "title").Should().Be("The Watchmen");
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Reject_Two_Writers_On_The_Same_Path(string kind)
+    {
+        var store = StoreOf(kind, Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+        var (start, version) = store.Read(book);
+
+        store.Commit(book, version, _.DiffObjects(start, _.Set(start, "title", "The Watchmen")));
+
+        var second = () => store.Commit(book, version, _.DiffObjects(start, _.Set(start, "title", "Watchmen!")));
+
+        second.Should().Throw<ConcurrentModificationException>()
+            .Which.ConflictingPaths.Single().ToString().Should().Be("title");
+
+        // A rejected commit changes nothing.
+        store.Read(book).Version.Should().Be(1);
+        _.Get<string>(store.Read(book).Value, "title").Should().Be("The Watchmen");
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Keep_Aggregates_Independent(string kind)
+    {
+        var store = StoreOf(kind, Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+        var member = Aggregates.Member("samantha@gmail.com");
+
+        var (bookValue, bookVersion) = store.Read(book);
+        var (memberValue, memberVersion) = store.Read(member);
+
+        store.Commit(book, bookVersion, _.DiffObjects(bookValue, _.Set(bookValue, "publicationYear", 1986)));
+
+        // The member is untouched, so its version has not moved and a write against
+        // the version read earlier still applies.
+        store.Read(member).Version.Should().Be(memberVersion);
+        store.Commit(member, memberVersion, _.DiffObjects(memberValue, _.Set(memberValue, "isBlocked", true)));
+
+        _.Get<bool>(store.Read(member).Value, "isBlocked").Should().BeTrue();
+        _.Get<long>(store.Read(book).Value, "publicationYear").Should().Be(1986);
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Create_An_Aggregate_That_Is_Not_There_Yet(string kind)
+    {
+        var store = StoreOf(kind, Library.LibraryData);
+        var fresh = Aggregates.Book("978-0000000001");
+
+        var (missing, version) = store.Read(fresh);
+        var book = Map.Of("isbn", "978-0000000001", "title", "New", "authorIds", List.Of("alan-moore"));
+
+        var created = store.Commit(fresh, version, _.DiffObjects(missing, book));
+
+        created.Version.Should().Be(1);
+        _.Get<string>(created.Value, "title").Should().Be("New");
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Run_LibrarySystem_Unchanged(string kind)
+    {
+        var system = new LibrarySystem(StoreOf(kind, Library.LibraryData));
+
+        TitlesOf(system.GetBookLendings("franck@gmail.com", "samantha@gmail.com"))
+            .Should().Equal("Watchmen");
+
+        var book = system.AddBookItem("vip@gmail.com", Map.Of(
+            "isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib"));
+        _.Get<DataList>(book, "bookItems").Count.Should().Be(3);
+
+        system.BlockMember("franck@gmail.com", "samantha@gmail.com");
+        UserManagement.IsBlocked(
+            _.Get<DataMap>(system.Snapshot(), "userManagementData"), "samantha@gmail.com")
+            .Should().BeTrue();
+
+        system.AddMember("franck@gmail.com", Map.Of(
+            "email", "new@gmail.com", "password", Passwords.Hash("new-secret", 1000)));
+        UserManagement.IsMember(
+            _.Get<DataMap>(system.Snapshot(), "userManagementData"), "new@gmail.com")
+            .Should().BeTrue();
+
+        var notALibrarian = () => system.BlockMember("vip@gmail.com", "samantha@gmail.com");
+        notALibrarian.Should().Throw<Exception>().WithMessage("Not allowed to block members");
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Survive_Parallel_Writes_To_Different_Aggregates(string kind)
+    {
+        const int books = 12;
+        var seed = Enumerable.Range(0, books).Aggregate(Library.LibraryData,
+            (data, i) => _.Set(data, ["catalog", "booksByIsbn", $"978-000000000{i}"], Map.Of(
+                "isbn", $"978-000000000{i}", "title", $"Book {i}", "authorIds", List.Of("alan-moore"))));
+
+        var system = new LibrarySystem(StoreOf(kind, seed));
+
+        Parallel.For(0, books, i =>
+            system.AddBookItem("franck@gmail.com", Map.Of(
+                "isbn", $"978-000000000{i}", "id", $"item-{i}", "libId", "brooklyn-lib")));
+
+        var final = system.Snapshot();
+        for (var i = 0; i < books; i++)
+            _.Get<DataList>(final, ["catalog", "booksByIsbn", $"978-000000000{i}", "bookItems"])
+                .Select(item => _.Get<string>(item, "id")).Should().Equal($"item-{i}");
+    }
+
+    // ---- where the two implementations legitimately differ ----
+
+    [Fact]
+    public void Should_Reject_A_Client_Older_Than_The_Retained_Tail()
+    {
+        // Room for two changes only.
+        var store = new DiffIndexedStore(Library.LibraryData, retainedChangesPerAggregate: 2);
+        var book = Aggregates.Book("978-1779501127");
+
+        var (start, ancientVersion) = store.Read(book);
+
+        // Three unrelated writes push the client version off the end of the tail.
+        var running = start;
+        for (var i = 0; i < 3; i++)
+        {
+            var (value, version) = store.Read(book);
+            running = _.Set(value, "publicationYear", 1900 + i);
+            store.Commit(book, version, _.DiffObjects(value, running));
+        }
+
+        // The paths do not collide, but the store can no longer tell that.
+        var late = () => store.Commit(book, ancientVersion, _.DiffObjects(start, _.Set(start, "title", "Late")));
+
+        late.Should().Throw<StaleVersionException>()
+            .Which.ClientVersion.Should().Be(ancientVersion);
+    }
+
+    [Fact]
+    public void Should_Answer_An_Old_Client_When_Every_Version_Is_Retained()
+    {
+        // The same sequence against the store that keeps values: it can still work out
+        // what moved, so a non-colliding late write is accepted rather than refused.
+        var store = new SnapshotAggregateStore(Library.LibraryData);
+        var book = Aggregates.Book("978-1779501127");
+
+        var (start, ancientVersion) = store.Read(book);
+
+        for (var i = 0; i < 3; i++)
+        {
+            var (value, version) = store.Read(book);
+            store.Commit(book, version, _.DiffObjects(value, _.Set(value, "publicationYear", 1900 + i)));
+        }
+
+        var late = store.Commit(book, ancientVersion, _.DiffObjects(start, _.Set(start, "title", "Late")));
+
+        _.Get<string>(late.Value, "title").Should().Be("Late");
+        _.Get<long>(late.Value, "publicationYear").Should().Be(1902);
     }
 
     [Fact]
@@ -1327,6 +1556,117 @@ public sealed class Tests
         // A leaf part-way along is still an error, not something to overwrite.
         var throughALeaf = () => _.Set(Map.Of("a", "leaf"), ["a", "b"], 1);
         throughALeaf.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Should_Diff_From_Nothing_And_Merge_Into_Nothing()
+    {
+        // Creating a value is the same operation as changing one, so a store needs no
+        // separate path for an aggregate that does not exist yet.
+        var book = Map.Of("isbn", "978-1779501127", "title", "Watchmen");
+
+        var born = _.DiffObjects(DataNull.Instance, book);
+        ShouldEqual(born, Map.Of("isbn", "978-1779501127", "title", "Watchmen"));
+        ShouldEqual(_.Merge(DataNull.Instance, born).As<DataMap>(), book);
+
+        // And the reverse reads as every key removed.
+        ShouldEqual(
+            _.DiffObjects(book, DataNull.Instance),
+            Map.Of("isbn", DataNull.Instance, "title", DataNull.Instance));
+
+        // A list cannot be rebuilt from its diff alone. Diffs are always maps, with
+        // indices as string keys, so the root container type is gone by then --
+        // creating a list-rooted aggregate needs the value, not the difference.
+        var list = List.Of("a", "b");
+        ShouldEqual(
+            _.Merge(DataNull.Instance, _.DiffObjects(DataNull.Instance, list)).As<DataMap>(),
+            Map.Of("0", "a", "1", "b"));
+    }
+
+    [Fact]
+    public void Should_Treat_A_Path_And_Its_Ancestor_As_Overlapping()
+    {
+        DataPath.Of("items").Overlaps(DataPath.Of("items", 1)).Should().BeTrue();
+        DataPath.Of("items", 1).Overlaps(DataPath.Of("items")).Should().BeTrue();
+        DataPath.Of("items", 1).Overlaps(DataPath.Of("items", 1)).Should().BeTrue();
+
+        // Siblings are independent, and so are unrelated branches.
+        DataPath.Of("items", 0).Overlaps(DataPath.Of("items", 1)).Should().BeFalse();
+        DataPath.Of("items").Overlaps(DataPath.Of("title")).Should().BeFalse();
+
+        // The root contains everything.
+        DataPath.Root.Overlaps(DataPath.Of("items", 1)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Should_Conflict_When_One_Writer_Replaces_What_Another_Reaches_Into()
+    {
+        var start = Map.Of("items", List.Of("a", "b"));
+
+        // One writer drops the whole list, the other edits one element. The paths are
+        // not equal, but they are not independent: exact intersection let both
+        // through and the merge then produced a map where a list should be.
+        var wholesale = _.DiffObjects(start, Map.Of("items", DataNull.Instance));
+        var element = _.DiffObjects(start, Map.Of("items", List.Of("a", "c")));
+
+        // Rendered "items.1", not "items.[1]": inside a diff an index is a string key.
+        SystemConsistency.CommonPaths(wholesale, element)
+            .Select(p => p.ToString()).Should().Equal("items.1");
+
+        SystemConsistency.CommonPaths(element, wholesale)
+            .Select(p => p.ToString()).Should().Equal("items");
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Reject_A_Write_Into_Something_Another_Writer_Replaced(string kind)
+    {
+        var store = StoreOf(kind, Map.Of("book", Map.Of("items", List.Of("a", "b"))));
+        var book = DataPath.Of("book");
+
+        var (start, version) = store.Read(book);
+
+        // Writer 1 drops the list entirely.
+        store.Commit(book, version, _.DiffObjects(start, _.Set(start, "items", DataNull.Instance)));
+
+        // Writer 2 still holds the old version and edits inside that list.
+        var edit = () => store.Commit(book, version,
+            _.DiffObjects(start, _.Set(start, ["items", 1], "c")));
+
+        edit.Should().Throw<ConcurrentModificationException>();
+
+        // The list stayed dropped rather than being resurrected as a map.
+        (_.Get(store.Read(book).Value, "items") is DataNull).Should().BeTrue();
+    }
+
+    [Theory]
+    [MemberData(nameof(StoreKinds))]
+    public void Should_Still_Merge_Writers_On_Sibling_Elements(string kind)
+    {
+        // The prefix rule must not make independent edits collide.
+        var store = StoreOf(kind, Map.Of("book", Map.Of("items", List.Of("a", "b"))));
+        var book = DataPath.Of("book");
+
+        var (start, version) = store.Read(book);
+
+        store.Commit(book, version, _.DiffObjects(start, _.Set(start, ["items", 0], "A")));
+        var second = store.Commit(book, version, _.DiffObjects(start, _.Set(start, ["items", 1], "B")));
+
+        ShouldEqual(_.Get(second.Value, "items").As<DataList>(), List.Of("A", "B"));
+    }
+
+    [Fact]
+    public void Should_Treat_An_Empty_Diff_As_Touching_Nothing()
+    {
+        // InformationPaths reports the root of an empty map, because setting a field
+        // to {} really is a change. A diff is different: empty means nothing moved,
+        // and the root would otherwise be a prefix of every concurrent write.
+        _.InformationPaths(Map.Of()).Select(p => p.ToString()).Should().Equal("(root)");
+        _.ChangedPaths(Map.Of()).Should().BeEmpty();
+
+        var busy = _.DiffObjects(Map.Of("a", 1), Map.Of("a", 2));
+        SystemConsistency.CommonPaths(Map.Of(), busy).Should().BeEmpty();
+        SystemConsistency.CommonPaths(busy, Map.Of()).Should().BeEmpty();
     }
 
     [Fact]

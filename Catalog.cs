@@ -86,7 +86,19 @@ public static class Catalog
         if (!_.ContainsKey(catalogData, bookPath))
             throw new KeyNotFoundException($"No book with isbn '{isbn}'");
 
-        var book = _.Get<DataMap>(catalogData, bookPath);
+        return _.Set(catalogData, bookPath,
+            AddItemToBook(_.Get<DataMap>(catalogData, bookPath), bookItemInfo));
+    }
+
+    /// The same operation scoped to a single book, which is all a caller holding that
+    /// aggregate can offer. AddBookItem is this plus the lookup.
+    ///
+    /// Aggregate boundaries push back into function signatures like this: a client
+    /// that only has the book cannot call something that wants the whole catalogue.
+    public static DataMap AddItemToBook(DataMap book, DataMap bookItemInfo)
+    {
+        Validation.ValidateOrThrow(Schemas.BookItemInfo, bookItemInfo);
+
         var existing = book.ContainsKey("bookItems") ? _.Get<DataList>(book, "bookItems") : DataList.Empty;
 
         var id = _.Get<string>(bookItemInfo, "id");
@@ -98,7 +110,7 @@ public static class Catalog
             "libId", _.Get<string>(bookItemInfo, "libId"),
             "isLent", false);
 
-        return _.Set(catalogData, ["booksByIsbn", isbn, "bookItems"], existing.Add(item));
+        return book.SetItem("bookItems", existing.Add(item));
     }
 
     public static DataList AuthorNames(DataMap catalogData, DataMap book)

@@ -43,7 +43,7 @@ public static partial class _
     {
         if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return DataMap.Empty;
 
-        var keys = Union(Keys(data1), Keys(data2));
+        var keys = Union(KeysOrEmpty(data1), KeysOrEmpty(data2));
         var diff = DataMap.CreateBuilder();
 
         foreach (var key in keys)
@@ -52,6 +52,12 @@ public static partial class _
 
         return diff.ToDataMap();
     }
+
+    /// A leaf -- most usefully a null -- contributes no keys, so diffing an aggregate
+    /// that does not exist yet against its first value reports every key as added.
+    /// That makes creating an aggregate the same operation as changing one.
+    private static IReadOnlyList<StringOrInt> KeysOrEmpty(DataValue value) =>
+        IsObject(value) ? Keys(value) : [];
 
     /// List indices address a map as their string form, which Get and Set accept
     /// on the way back into a list.

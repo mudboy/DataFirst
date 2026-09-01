@@ -2,79 +2,97 @@ using DataFirst.Lodash;
 
 namespace DataFirst;
 
-/// The system layer: the only place that reads and writes the live state.
+/// The system layer: the only place that talks to the store.
 ///
 /// Every decision still happens in the pure functions of Library, Catalog and
 /// UserManagement, which take data and return data and know nothing about a store.
-/// This class does three things and nothing else: read a snapshot, call one of those
-/// functions, and commit the aggregate that changed.
+/// This class reads the aggregates a decision needs, calls one of those functions,
+/// and sends back a diff.
 ///
-/// Reads may span aggregates freely -- a snapshot is an immutable value, so reading
-/// the whole thing costs a pointer read and cannot tear. Writes are scoped to a
-/// single aggregate, which is what keeps unrelated work from contending.
-public sealed class LibrarySystem(SystemState state)
+/// It codes against IAggregateStore rather than a concrete store, so the same logic
+/// runs over one that keeps every version and one that keeps only recent paths. The
+/// read-compute-diff-commit shape is the same either way, which is the point: it is
+/// also the shape a network round trip takes.
+public sealed class LibrarySystem(IAggregateStore store)
 {
-    public LibrarySystem(DataMap initial) : this(new SystemState(initial)) { }
+    public LibrarySystem(DataMap initial) : this(new SnapshotAggregateStore(initial)) { }
 
-    public DataMap Snapshot() => state.Get();
+    /// The whole system, for reads that span aggregates. A snapshot is an immutable
+    /// value, so reading needs no coordination at all.
+    public DataMap Snapshot() => store.Read(Aggregates.Everything).Value.As<DataMap>();
 
-    // Reads: a snapshot is a value, so these need no coordination at all.
+    // Reads.
 
-    public DataList SearchBook(DataMap searchQuery) => Library.SearchBook(state.Get(), searchQuery);
+    public DataList SearchBook(DataMap searchQuery) => Library.SearchBook(Snapshot(), searchQuery);
 
     public string SearchBooksByTitleJson(string query) =>
-        Library.SearchBooksByTitleJson(state.Get(), query);
+        Library.SearchBooksByTitleJson(Snapshot(), query);
 
     public DataList GetBookLendings(string userId, string memberId) =>
-        Library.GetBookLendings(state.Get(), userId, memberId);
+        Library.GetBookLendings(Snapshot(), userId, memberId);
 
-    // Writes: compute over a snapshot, commit only the aggregate that changed.
+    // Writes: read one aggregate, compute over it, send back the difference.
 
-    /// Adds a copy of a book. Contends only with other changes to that same book.
+    /// Adds a copy of a book, returning the new book. The caller only ever holds that
+    /// one aggregate -- which is what makes this shape work over a network.
     public DataMap AddBookItem(string userId, DataMap bookItemInfo)
     {
-        var snapshot = state.Get();
-        var updated = Library.AddBookItem(snapshot, userId, bookItemInfo);
+        var users = ReadUsers();
+        if (!UserManagement.IsLibrarian(users, userId) && !UserManagement.IsVipMember(users, userId))
+            throw new Exception("Not allowed to add book items");
 
-        return CommitChangeTo(Aggregates.Book(_.Get<string>(bookItemInfo, "isbn")), snapshot, updated);
+        Validation.ValidateOrThrow(Schemas.BookItemInfo, bookItemInfo);
+        var isbn = _.Get<string>(bookItemInfo, "isbn");
+
+        var (value, version) = store.Read(Aggregates.Book(isbn));
+        if (value is DataNull) throw new KeyNotFoundException($"No book with isbn '{isbn}'");
+
+        var book = value.As<DataMap>();
+        var updated = Catalog.AddItemToBook(book, bookItemInfo);
+
+        return Commit(Aggregates.Book(isbn), version, book, updated);
     }
 
-    /// Blocks a member. Contends only with other changes to that same member, so it
-    /// can run alongside a book being added without either retrying on conflict.
+    /// Blocks a member. Scoped to that member, so it can run alongside a book being
+    /// changed without either one retrying.
     public DataMap BlockMember(string userId, string memberId)
     {
-        var snapshot = state.Get();
-        var users = _.Get<DataMap>(snapshot, "userManagementData");
-
+        var users = ReadUsers();
         if (!UserManagement.IsLibrarian(users, userId))
             throw new Exception("Not allowed to block members");
 
-        var updated = _.Set(snapshot, "userManagementData",
-            UserManagement.BlockMember(users, memberId));
+        var (value, version) = store.Read(Aggregates.Member(memberId));
+        if (value is DataNull) throw new KeyNotFoundException($"No member with id '{memberId}'");
 
-        return CommitChangeTo(Aggregates.Member(memberId), snapshot, updated);
+        var member = value.As<DataMap>();
+
+        return Commit(Aggregates.Member(memberId), version, member, member.SetItem("isBlocked", true));
     }
 
     /// Adds a member. Scoped to the whole member collection rather than one member,
     /// because the duplicate check is only meaningful against the collection.
     public DataMap AddMember(string userId, DataMap member)
     {
-        var snapshot = state.Get();
-        var users = _.Get<DataMap>(snapshot, "userManagementData");
-
+        var users = ReadUsers();
         if (!UserManagement.IsLibrarian(users, userId))
             throw new Exception("Not allowed to add members");
 
-        var updated = _.Set(snapshot, "userManagementData", UserManagement.AddMember(users, member));
+        var (value, version) = store.Read(Aggregates.Members);
+        var members = value.As<DataMap>();
 
-        return CommitChangeTo(Aggregates.Members, snapshot, updated);
+        // UserManagement.AddMember validates and rejects duplicates; it wants the
+        // user-management map, so the collection is lifted into that shape and the
+        // result taken back out.
+        var updated = _.Get<DataMap>(
+            UserManagement.AddMember(Map.Of("members", members), member), "members");
+
+        return Commit(Aggregates.Members, version, members, updated);
     }
 
-    /// Extracts one aggregate from before and after, and commits just that.
-    ///
-    /// The pure function computed a whole new system value, but only one aggregate
-    /// of it is offered to the store -- so a concurrent change anywhere else is not
-    /// something this commit has an opinion about.
-    private DataMap CommitChangeTo(DataPath aggregate, DataMap before, DataMap after) =>
-        state.Commit(aggregate, _.Get(before, aggregate), _.Get(after, aggregate));
+    private DataMap ReadUsers() => store.Read(Aggregates.UserManagement).Value.As<DataMap>();
+
+    /// Sends the difference rather than the value, so the store learns which paths
+    /// were touched and can say precisely what collided.
+    private DataMap Commit(DataPath aggregate, long version, DataValue before, DataValue after) =>
+        store.Commit(aggregate, version, _.DiffObjects(before, after)).Value.As<DataMap>();
 }

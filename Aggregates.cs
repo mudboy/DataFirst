@@ -28,6 +28,9 @@ public static class Aggregates
     /// that does not exist yet.
     public static DataPath Members => DataPath.Of("userManagementData", "members");
 
+    /// All of user management, for reads that decide permission.
+    public static DataPath UserManagement => DataPath.Of("userManagementData");
+
     /// The whole system. What the book's SystemState uses for every commit.
     public static DataPath Everything => DataPath.Root;
 }
