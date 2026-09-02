@@ -1731,6 +1731,26 @@ public sealed class Tests
     }
 
     [Fact]
+    public void Should_Dump_A_Value_As_Json()
+    {
+        // Previously this threw: the directory was never created, the method name was
+        // a typo, and JsonSerializer wrote the wrapper rather than the data.
+        var path = Debug.Dump($"dump-{Guid.NewGuid():N}", Map.Of(
+            "title", "Watchmen",
+            "authorIds", List.Of("alan-moore")));
+
+        try
+        {
+            File.ReadAllText(path).Should()
+                .Be("""{"title":"Watchmen","authorIds":["alan-moore"]}""");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void DiffyLoop()
     {
         var watchmen = Map.Of(

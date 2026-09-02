@@ -29,7 +29,9 @@ public static class Library
                     "password", Passwords.Hash("vip-secret"),
                     "isVip", true)));
 
-    public static DataMap LibraryData =
+    /// readonly, so the canonical value cannot be reassigned from anywhere. The data
+    /// it holds was already immutable; the field was not.
+    public static readonly DataMap LibraryData =
         Map.Of("catalog",
             Map.Of(
                 "booksByIsbn", Map.Of(

@@ -1,31 +1,25 @@
-using System.Text.Json;
-
 namespace DataFirst;
 
+/// Writes a value out as JSON so it can be looked at.
+///
+/// Generic data is the whole point here, so there is one function rather than an
+/// overload per arity: anything worth dumping is already a DataValue, and several of
+/// them are a map.
 public static class Debug
 {
-    public static void DumbContext<T1>(string context, T1 value)
-    {
-        File.WriteAllText(Pathx(context), JsonSerializer.Serialize(value));
-    }
+    private const string Directory = "test-data";
 
-    public static void DumpContext<T1, T2>(string context, (T1 v1, T2 v2) values)
+    /// Writes to test-data/&lt;context&gt;.json, creating the directory if it is not there.
+    /// Returns the path written, so a caller can say where to look.
+    public static string Dump(string context, DataValue value)
     {
-        DumbContext(context, values);
-    }
-    
-    public static void DumpContext<T1, T2, T3>(string context, (T1 v1, T2 v2, T3 v3) values)
-    {
-        DumbContext(context, values);
-    }    
-    
-    public static void DumpContext<T1, T2, T3, T4>(string context, (T1 v1, T2 v2, T3 v3, T4 v4) values)
-    {
-        DumbContext(context, values);
-    }
+        ArgumentException.ThrowIfNullOrWhiteSpace(context);
 
-    private static string Pathx(string context)
-    {
-        return Path.Combine("test-data", context);
+        System.IO.Directory.CreateDirectory(Directory);
+
+        var path = Path.Combine(Directory, Path.ChangeExtension(context, ".json"));
+        File.WriteAllText(path, DataJson.Serialize(value));
+
+        return path;
     }
 }
