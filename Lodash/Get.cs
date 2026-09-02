@@ -28,6 +28,14 @@ public static partial class _
     public static DataValue GetOrNull(DataValue obj, StringOrInt key) =>
         ContainsKey(obj, key) ? Get(obj, key) : DataNull.Instance;
 
+    /// Like Get for a path, yielding null rather than throwing when any step of it
+    /// is absent. An empty path addresses the value itself.
+    public static DataValue GetOrNull(DataValue obj, IReadOnlyList<StringOrInt> path)
+    {
+        if (path.Count == 0) return obj;
+        return ContainsKey(obj, path) ? Get(obj, path) : DataNull.Instance;
+    }
+
     public static T Get<T>(DataValue obj, StringOrInt key) => Get(obj, key).As<T>();
 
     public static T Get<T>(DataValue obj, IReadOnlyList<StringOrInt> path) => Get(obj, path).As<T>();

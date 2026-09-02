@@ -1670,6 +1670,67 @@ public sealed class Tests
     }
 
     [Fact]
+    public void Should_Read_Several_Keys_At_Once()
+    {
+        var book = Map.Of(
+            "isbn", "978-1779501127",
+            "title", "Watchmen",
+            "publicationYear", 1987);
+
+        ShouldEqual(_.At(book, "title", "isbn"), List.Of("Watchmen", "978-1779501127"));
+
+        // Order follows the key list, not the map.
+        ShouldEqual(_.At(book, "isbn", "title"), List.Of("978-1779501127", "Watchmen"));
+    }
+
+    [Fact]
+    public void Should_Yield_Null_For_A_Key_That_Is_Not_There()
+    {
+        var book = Map.Of("title", "Watchmen");
+
+        // The result is always as long as the key list, so it can be zipped back
+        // against those keys without the positions drifting.
+        ShouldEqual(
+            _.At(book, "title", "publisher", "title"),
+            List.Of("Watchmen", DataNull.Instance, "Watchmen"));
+
+        _.At(book).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Should_Read_At_Indexes_Of_A_List()
+    {
+        var authors = List.Of("Alan Moore", "Dave Gibbons", "John Higgins");
+
+        ShouldEqual(_.At(authors, 2, 0), List.Of("John Higgins", "Alan Moore"));
+
+        // Out of range is absent, not an error.
+        ShouldEqual(_.At(authors, 9), List.Of(DataNull.Instance));
+    }
+
+    [Fact]
+    public void Should_Read_At_Paths()
+    {
+        var library = Library.LibraryData;
+
+        var picked = _.At(library, [
+            DataPath.Of("catalog", "booksByIsbn", "978-1779501127", "title"),
+            DataPath.Of("userManagementData", "members", "samantha@gmail.com", "email"),
+            DataPath.Of("catalog", "nothing", "here")]);
+
+        ShouldEqual(picked, List.Of("Watchmen", "samantha@gmail.com", DataNull.Instance));
+    }
+
+    [Fact]
+    public void Should_Take_Keys_From_A_Collection()
+    {
+        var book = Map.Of("isbn", "978-1779501127", "title", "Watchmen");
+        var wanted = new List<StringOrInt> { "title", "isbn" };
+
+        ShouldEqual(_.At(book, wanted), List.Of("Watchmen", "978-1779501127"));
+    }
+
+    [Fact]
     public void DiffyLoop()
     {
         var watchmen = Map.Of(
