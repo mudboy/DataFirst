@@ -1751,6 +1751,16 @@ public sealed class Tests
     }
 
     [Fact]
+    public void Probe_MergeIntoMissingPath()
+    {
+        var previous = Map.Of("book", Map.Of("title", "Watchmen"));
+        var next = Map.Of("book", Map.Of("title", "Watchmen", "items", List.Of(Map.Of("id", "a"))));
+        var diff = _.DiffObjects(previous, next);
+        var merged = _.Merge(previous, diff);
+        ShouldEqual(merged, next);
+    }
+
+    [Fact]
     public void DiffyLoop()
     {
         var watchmen = Map.Of(
