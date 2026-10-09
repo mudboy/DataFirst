@@ -59,7 +59,7 @@ public sealed class DiffIndexedStore : IAggregateStore
                 if (conflicts.Count > 0) throw new ConcurrentModificationException(conflicts);
             }
 
-            var merged = _.Merge(ValueAt(current.Data, aggregate), diff);
+            var merged = _.ApplyDiff(ValueAt(current.Data, aggregate), diff);
             var nextVersion = entry.Version + 1;
 
             var next = new State(

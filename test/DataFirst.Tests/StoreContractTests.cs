@@ -97,7 +97,7 @@ public sealed class StoreContractTests
     [Theory, MemberData(nameof(Kinds))]
     public void An_empty_diff_advances_the_version_and_leaves_the_value_alone(string kind)
     {
-        // Regression: Merge used to write the empty diff over the whole aggregate.
+        // Regression: ApplyDiff used to write the empty diff over the whole aggregate.
         var store = StoreHarness.Make(kind);
         var before = store.Read(StoreHarness.Aggregate);
 

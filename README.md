@@ -50,7 +50,7 @@ The generic functions live in `DataFirst.Lodash` as static methods on `_`. Every
 | `at` | `At` | keys, or paths |
 | `get` | `Get`, `GetOrNull` | `GetOrNull` yields null rather than throwing |
 | `has` | `ContainsKey` | one key, or a path |
-| `merge` | `MergeDeep` | recursive; maps by key, lists by index, the second wins |
+| `merge` | `Merge` | recursive; maps by key, lists by index, the second wins |
 | `omit` | `Omit` | by path; absent paths are skipped, and list elements cannot be removed |
 | `set` | `Set` | writes through a path, creating missing containers |
 | `values` | `Values` | |
@@ -86,7 +86,7 @@ The generic functions live in `DataFirst.Lodash` as static methods on `_`. Every
 | `size` | `Size` | |
 | `sortBy` | `SortBy` | stable; by function or field |
 
-Beyond the appendix, the core adds what the version-reconciliation and aggregate code needs: `Diff` and `DiffObjects`, `Merge` (applies a diff, as opposed to `MergeDeep`), `InformationPaths` and `ChangedPaths`, `Update`, `SetAt` and `InsertAt`, `Unwind`, `AggregateFields`, `Keys`, and `Getter` for naming a path once.
+Beyond the appendix, the core adds what the version-reconciliation and aggregate code needs: `Diff` and `DiffObjects`, `ApplyDiff` (applies a diff, as opposed to the recursive `Merge`), `InformationPaths` and `ChangedPaths`, `Update`, `SetAt` and `InsertAt`, `Unwind`, `AggregateFields`, `Keys`, and `Getter` for naming a path once.
 
 ## Build and test
 

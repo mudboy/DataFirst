@@ -105,7 +105,7 @@ public sealed class DiffAndMergeTests
         var diff = _.DiffObjects(previous, next);
         diff.ShouldEqual(Map.Of(("xs", Map.Of(("1", DataNull.Instance)))));
 
-        _.Merge(previous, diff).ShouldEqual(next);
+        _.ApplyDiff(previous, diff).ShouldEqual(next);
     }
     [Fact]
     public void Should_Merge_A_Diff_Back_Onto_Its_Source()
@@ -113,7 +113,7 @@ public sealed class DiffAndMergeTests
         var previous = Map.Of(("a", Map.Of(("x", 1), ("y", List.Of(2, 3)))));
         var next = Map.Of(("a", Map.Of(("x", 9), ("y", List.Of(2, 30)))));
 
-        _.Merge(previous, _.DiffObjects(previous, next)).ShouldEqual(next);
+        _.ApplyDiff(previous, _.DiffObjects(previous, next)).ShouldEqual(next);
     }
     [Fact]
     public void Should_Merge_A_Diff_That_Introduces_A_Path()
@@ -124,7 +124,7 @@ public sealed class DiffAndMergeTests
         var previous = Map.Of(("book", Map.Of(("title", "Watchmen"))));
         var next = Map.Of(("book", Map.Of(("title", "Watchmen"), ("items", List.Of(Map.Of(("id", "a")))))));
 
-        _.Merge(previous, _.DiffObjects(previous, next)).ShouldEqual(next);
+        _.ApplyDiff(previous, _.DiffObjects(previous, next)).ShouldEqual(next);
     }
     [Fact]
     public void Should_Diff_From_Nothing_And_Merge_Into_Nothing()
@@ -135,7 +135,7 @@ public sealed class DiffAndMergeTests
 
         var born = _.DiffObjects(DataNull.Instance, book);
         born.ShouldEqual(Map.Of(("isbn", "978-1779501127"), ("title", "Watchmen")));
-        (_.Merge(DataNull.Instance, born).As<DataMap>()).ShouldEqual(book);
+        (_.ApplyDiff(DataNull.Instance, born).As<DataMap>()).ShouldEqual(book);
 
         // And the reverse reads as every key removed.
         _.DiffObjects(book, DataNull.Instance).ShouldEqual(Map.Of(("isbn", DataNull.Instance), ("title", DataNull.Instance)));
@@ -144,7 +144,7 @@ public sealed class DiffAndMergeTests
         // indices as string keys, so the root container type is gone by then --
         // creating a list-rooted aggregate needs the value, not the difference.
         var list = List.Of("a", "b");
-        (_.Merge(DataNull.Instance, _.DiffObjects(DataNull.Instance, list)).As<DataMap>()).ShouldEqual(Map.Of(("0", "a"), ("1", "b")));
+        (_.ApplyDiff(DataNull.Instance, _.DiffObjects(DataNull.Instance, list)).As<DataMap>()).ShouldEqual(Map.Of(("0", "a"), ("1", "b")));
     }
     [Fact]
     public void Should_Treat_An_Empty_Diff_As_Touching_Nothing()
@@ -165,7 +165,7 @@ public sealed class DiffAndMergeTests
         var previous = Map.Of(("book", Map.Of(("title", "Watchmen"))));
         var next = Map.Of(("book", Map.Of(("title", "Watchmen"), ("items", List.Of(Map.Of(("id", "a")))))));
         var diff = _.DiffObjects(previous, next);
-        var merged = _.Merge(previous, diff);
+        var merged = _.ApplyDiff(previous, diff);
         merged.ShouldEqual(next);
     }
     [Fact]

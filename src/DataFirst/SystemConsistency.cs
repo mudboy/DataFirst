@@ -35,7 +35,7 @@ public static class SystemConsistency
         var conflicts = CommonPaths(previousToCurrent, previousToNext);
         if (conflicts.Count > 0) throw new ConcurrentModificationException(conflicts);
 
-        return _.Merge(current, previousToNext);
+        return _.ApplyDiff(current, previousToNext);
     }
 
     /// The locations both diffs touch. Empty means the two changes are independent

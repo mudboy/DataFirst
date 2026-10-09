@@ -50,7 +50,7 @@ public sealed class SnapshotAggregateStore : IAggregateStore
                 if (conflicts.Count > 0) throw new ConcurrentModificationException(conflicts);
             }
 
-            var merged = _.Merge(currentValue, diff);
+            var merged = _.ApplyDiff(currentValue, diff);
             var nextVersion = currentVersion + 1;
 
             var next = new State(

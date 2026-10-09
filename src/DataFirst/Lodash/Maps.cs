@@ -94,7 +94,7 @@ public static partial class _
     /// genuinely changed to null. An empty diff records nothing, so the target comes
     /// back unchanged (InformationPaths would report the diff's own root, and writing
     /// that would replace the target with {}).
-    public static DataValue Merge(DataValue target, DataMap diff)
+    public static DataValue ApplyDiff(DataValue target, DataMap diff)
     {
         var paths = ChangedPaths(diff);
         return paths.Aggregate(Seed(target, paths), (acc, path) => Set(acc, path, Get(diff, path)));
@@ -110,12 +110,12 @@ public static partial class _
     private static DataValue Seed(DataValue target, IReadOnlyList<DataPath> paths) =>
         target is DataNull && paths.Count > 0 ? DataMap.Empty : target;
 
-    public static DataMap Merge(DataMap target, DataMap diff) =>
-        Merge((DataValue)target, diff).As<DataMap>();
+    public static DataMap ApplyDiff(DataMap target, DataMap diff) =>
+        ApplyDiff((DataValue)target, diff).As<DataMap>();
 
     /// Recursively merges two values, the second taking precedence -- lodash's merge.
     ///
-    ///     _.MergeDeep(
+    ///     _.Merge(
     ///         Map.Of(("a", List.Of(Map.Of(("b", 2)), Map.Of(("d", 4))))),
     ///         Map.Of(("a", List.Of(Map.Of(("c", 3)), Map.Of(("e", 5))))))
     ///     ->  { a: [ { b: 2, c: 3 }, { d: 4, e: 5 } ] }
@@ -126,8 +126,8 @@ public static partial class _
     /// the second, null included: null is a value here, not an absence, so it
     /// overwrites.
     ///
-    /// Not the same as Merge, which applies a diff and treats its keys as paths.
-    public static DataValue MergeDeep(DataValue first, DataValue second) =>
+    /// Not the same as ApplyDiff, which applies a diff and treats its keys as paths.
+    public static DataValue Merge(DataValue first, DataValue second) =>
         (first, second) switch
         {
             (DataMap a, DataMap b) => MergeMaps(a, b),
@@ -135,19 +135,19 @@ public static partial class _
             _ => second
         };
 
-    public static DataMap MergeDeep(DataMap first, DataMap second) => MergeMaps(first, second);
+    public static DataMap Merge(DataMap first, DataMap second) => MergeMaps(first, second);
 
     private static DataMap MergeMaps(DataMap first, DataMap second) =>
         second.Aggregate(first, (merged, entry) =>
             merged.SetItem(
                 entry.Key,
-                first.ContainsKey(entry.Key) ? MergeDeep(first[entry.Key], entry.Value) : entry.Value));
+                first.ContainsKey(entry.Key) ? Merge(first[entry.Key], entry.Value) : entry.Value));
 
     private static DataList MergeLists(DataList first, DataList second) =>
         DataList.Create(Enumerable.Range(0, Math.Max(first.Count, second.Count)).Select(index =>
             (index < first.Count, index < second.Count) switch
             {
-                (true, true) => MergeDeep(first[index], second[index]),
+                (true, true) => Merge(first[index], second[index]),
                 (true, false) => first[index],
                 _ => second[index]
             }));
