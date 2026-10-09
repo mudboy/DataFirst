@@ -9,12 +9,6 @@ using Xunit;
 
 namespace DataFirst.Library.Tests;
 
-file static class DiffAssertions
-{
-    public static void ChangedPathsAre(this DataMap diff, params string[] expected) =>
-        _.ChangedPaths(diff).Select(p => p.ToString()).Should().BeEquivalentTo(expected);
-}
-
 [Properties(Arbitrary = [typeof(Arbs)])]
 public sealed class CatalogTests
 {

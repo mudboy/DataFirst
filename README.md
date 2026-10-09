@@ -22,36 +22,8 @@ src/
     LibraryOperations.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs, Schemas.cs
                           users, books, lending and the aggregate boundaries
 test/
-  DataFirst.Tests/              core and database; FsCheck property tests alongside example tests
-    DataTypesTests.cs           DataMap, DataList, DataPath, DataValue and JSON round trips
-    LodashTests.cs              Get/Set, list operations, grouping, literals, diff, information paths
-    ReadingDataTests.cs         getters, At, paths through maps and lists
-    WritingDataTests.cs         Set, Update, InsertAt, immutability, insertion order
-    CollectionOperationTests.cs aggregate, KeyBy, Unwind, reduce
-    DiffAndMergeTests.cs        diffing a value and merging a diff back
-    ConcurrentChangeTests.cs    reconciling concurrent commits and writer conflicts
-    StoreTests.cs               the aggregate store contract, retention, SystemState
-    ValidationTests.cs          schema validator keywords and error reporting
-    SchemaKeywordTests.cs       keywords that do not apply to a value
-    DataValueUnionTests.cs      exhaustive switch over DataValue
-    InfrastructureTests.cs      database reads and debug dumps
-  DataFirst.Library.Tests/      the library domain
-    DomainFixtures.cs           shared seed data for the domain tests
-    UserManagementTests.cs      user management
-    CatalogTests.cs             catalogue search and updates
-    LibraryAuthorisationTests.cs  who may read lendings and add items
-    LibrarySystemTests.cs       LibrarySystem over both stores
-    AggregatePathTests.cs       the aggregate paths
-    CatalogSearchTests.cs       author names, search, request validation
-    UserAccountTests.cs         roles, authentication, adding members
-    BookLendingTests.cs         reading and describing lendings, authorisation
-    BookItemTests.cs            adding book items
-    AggregateScopeTests.cs      what contends and what does not across aggregates
-    LibraryStoreTests.cs        the library running over both stores
-    StoreRetentionTests.cs      clients older than the retained history
-    LibrarySystemIntegrationTests.cs  the system layer and parallel writes
-    LibrarySchemaTests.cs       the schemas and the seed data
-    PasswordTests.cs            password hashing and verification
+  DataFirst.Tests/              tests for the core and database (one file per test class)
+  DataFirst.Library.Tests/      tests for the library domain
   DataFirst.Testing/            shared test support: generators and assertions
 ```
 
