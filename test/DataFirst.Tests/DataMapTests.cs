@@ -10,7 +10,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class DataMapProperties
+public sealed class DataMapTests
 {
     [Property]
     public bool Equality_is_reflexive_and_hash_agrees(DataMap map)

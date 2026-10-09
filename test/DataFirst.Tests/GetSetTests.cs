@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class GetSetProperties
+public sealed class GetSetTests
 {
     [Property]
     public Property Set_then_Get_returns_what_was_written()

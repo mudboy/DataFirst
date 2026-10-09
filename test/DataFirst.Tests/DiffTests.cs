@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class DiffProperties
+public sealed class DiffTests
 {
     private static readonly Gen<(DataMap Before, DataMap After)> ScalarEdit =
         from pair in Gens.MapWithExistingPath

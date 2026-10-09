@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class ValidationKeywordProperties
+public sealed class ValidationKeywordTests
 {
     private static bool Valid(DataValue schema, DataValue data) => Validation.Validate(schema, data).IsValid();
 

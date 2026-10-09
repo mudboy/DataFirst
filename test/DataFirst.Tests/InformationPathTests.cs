@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class InformationPathProperties
+public sealed class InformationPathTests
 {
     [Property]
     public bool Every_path_in_a_value_resolves_to_a_leaf_or_an_empty_composite(DataMap map) =>

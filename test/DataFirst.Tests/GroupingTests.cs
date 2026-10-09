@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class GroupingProperties
+public sealed class GroupingTests
 {
     private static readonly Gen<DataList> Rows =
         Gen.Choose(0, 8).SelectMany(n =>

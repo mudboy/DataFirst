@@ -10,7 +10,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class DataListProperties
+public sealed class DataListTests
 {
     [Property]
     public bool Equality_and_hash_follow_content(DataList list)

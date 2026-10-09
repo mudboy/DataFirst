@@ -11,7 +11,7 @@ namespace DataFirst.Tests;
 /// The appendix's "functions on collections": each takes a list or a map and works on
 /// the list's elements or the map's values.
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class CollectionFunctionProperties
+public sealed class CollectionFunctionTests
 {
     private static bool IsString(DataValue value) => value is string;
 

@@ -10,7 +10,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class DataPathProperties
+public sealed class DataPathTests
 {
     [Property]
     public bool Equality_and_hash_follow_the_steps(DataPath path) =>

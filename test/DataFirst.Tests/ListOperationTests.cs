@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class ListOperationProperties
+public sealed class ListOperationTests
 {
     [Property]
     public bool SetAt_inside_the_list_replaces_without_growing(DataList list, DataValue value)

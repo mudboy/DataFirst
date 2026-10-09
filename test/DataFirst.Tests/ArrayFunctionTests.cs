@@ -8,7 +8,7 @@ using Xunit;
 
 namespace DataFirst.Tests;
 
-public sealed class ArrayFunctionProperties
+public sealed class ArrayFunctionTests
 {
     private static Property Over(Gen<DataList> gen, Func<DataList, bool> check) =>
         Prop.ForAll(gen.ToArbitrary(), check);

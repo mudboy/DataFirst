@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class MergeProperties
+public sealed class MergeTests
 {
     [Property]
     public bool Merging_nothing_in_either_direction_changes_nothing(DataMap map) =>

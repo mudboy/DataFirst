@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class SortByProperties
+public sealed class SortByTests
 {
     /// Rows with a small sort key (so ties are common) and a sequence number that
     /// records the original position.

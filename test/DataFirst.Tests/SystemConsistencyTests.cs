@@ -10,7 +10,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class SystemConsistencyProperties
+public sealed class SystemConsistencyTests
 {
     private static readonly DataMap Base = Map.Of(("a", 0), ("b", 0), ("c", 0), ("nested", Map.Of(("x", 0), ("y", 0))));
 

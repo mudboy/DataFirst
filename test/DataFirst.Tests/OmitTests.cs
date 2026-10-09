@@ -9,7 +9,7 @@ using Xunit;
 namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
-public sealed class OmitProperties
+public sealed class OmitTests
 {
     /// A map and a path inside it whose last step is a map field -- the only kind
     /// Omit accepts.
