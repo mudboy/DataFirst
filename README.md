@@ -2,6 +2,8 @@
 
 A data-first library system in C#: state is plain, immutable data (maps, lists and values) and behaviour is pure functions over it. Lodash-style helpers (`Get`, `Set`, `Merge`, `Diff`, ...) operate on that data generically.
 
+It is based on the book [Data-Oriented Programming: Reduce software complexity](https://livebook.manning.com/book/data-oriented-programming) by Yehonathan Sharvit (Manning). The library example, the generic data and Lodash-style functions, schema validation, and the version-reconciliation and aggregate ideas follow the book; the C# design is this repository's own.
+
 ## Layout
 
 ```
