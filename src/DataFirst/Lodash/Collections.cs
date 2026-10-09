@@ -2,8 +2,10 @@ namespace DataFirst.Lodash;
 
 public static partial class _
 {
+    /// <summary>
     /// What the collection functions iterate: a list's elements, or a map's values.
     /// Anything else is not a collection.
+    /// </summary>
     private static IEnumerable<DataValue> Elements(DataValue coll, string operation) =>
         coll switch
         {
@@ -12,27 +14,50 @@ public static partial class _
             _ => throw new InvalidOperationException($"Cannot {operation} a {coll.Describe()}")
         };
 
-    /// True when the predicate holds for every element. An empty collection satisfies
-    /// it vacuously.
+    /// <summary>
+    /// Tests whether a predicate holds for every element.
+    /// </summary>
+    /// <param name="coll">A list, or a map whose values are tested.</param>
+    /// <param name="predicate">The test applied to each element.</param>
+    /// <returns>True when the predicate holds for every element; an empty collection satisfies it vacuously.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static bool Every(DataValue coll, Func<DataValue, bool> predicate) =>
         Elements(coll, "Every over").All(predicate);
 
-    /// The first element for which the predicate holds, or null when none does.
+    /// <summary>
+    /// Finds the first element for which a predicate holds.
+    /// </summary>
+    /// <remarks>
     /// Null is also what a matching null element looks like, so a caller searching a
-    /// collection that can hold nulls should use Filter instead.
+    /// collection that can hold nulls should use <see cref="Filter"/> instead.
+    /// </remarks>
+    /// <param name="coll">A list, or a map whose values are searched.</param>
+    /// <param name="predicate">The test applied to each element.</param>
+    /// <returns>The first matching element, or <see cref="DataNull"/> when none matches.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static DataValue Find(DataValue coll, Func<DataValue, bool> predicate) =>
         Elements(coll, "Find in").Cast<DataValue?>().FirstOrDefault(element => predicate(element!.Value))
         ?? (DataValue)DataNull.Instance;
 
-    /// Calls f on each element, in order, and hands the collection back so the call
-    /// can sit in the middle of a pipeline.
+    /// <summary>
+    /// Calls an action on each element, in order.
+    /// </summary>
+    /// <param name="coll">A list, or a map whose values are visited.</param>
+    /// <param name="f">The action to run for each element.</param>
+    /// <returns><paramref name="coll"/> itself, so the call can sit in the middle of a pipeline.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static DataValue ForEach(DataValue coll, Action<DataValue> f)
     {
         foreach (var element in Elements(coll, "ForEach over")) f(element);
         return coll;
     }
 
-    /// The number of elements of a list or entries of a map.
+    /// <summary>
+    /// Counts the elements of a list or the entries of a map.
+    /// </summary>
+    /// <param name="coll">A list or a map.</param>
+    /// <returns>The number of elements or entries.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static int Size(DataValue coll) =>
         coll switch
         {
@@ -41,33 +66,63 @@ public static partial class _
             _ => throw new InvalidOperationException($"Cannot take the Size of a {coll.Describe()}")
         };
 
+    /// <summary>
+    /// Tests whether a value is a list.
+    /// </summary>
+    /// <param name="value">The value to test.</param>
+    /// <returns>True when the value is a <see cref="DataList"/>.</returns>
     public static bool IsArray(DataValue value) => value is DataList;
 
-    /// Deep comparison. Maps compare regardless of key order, lists by position.
-    ///
-    /// It is the data's own equality, so it tells a long from a double: 1 and 1.0 are
-    /// different values here, as they are to Diff.
+    /// <summary>
+    /// Deep comparison of two values.
+    /// </summary>
+    /// <remarks>
+    /// Maps compare regardless of key order, lists by position. It is the data's own
+    /// equality, so it tells a long from a double: 1 and 1.0 are different values
+    /// here, as they are to <see cref="Diff"/>.
+    /// </remarks>
+    /// <param name="first">The first value.</param>
+    /// <param name="second">The second value.</param>
+    /// <returns>True when the two are equal.</returns>
     public static bool IsEqual(DataValue first, DataValue second) => first.Equals(second);
 
-    /// The elements sorted ascending by the key f gives each. The sort is stable --
-    /// elements with equal keys keep their original order -- and f runs once per
-    /// element.
-    ///
+    /// <summary>
+    /// Sorts elements ascending by a key computed for each.
+    /// </summary>
+    /// <remarks>
+    /// The sort is stable (elements with equal keys keep their original order) and
+    /// <paramref name="f"/> runs once per element.
+    /// <para>
     /// Keys are ordered by kind first: null, then booleans (false first), then
     /// numbers, then strings. Numbers compare by value, a long against a double
     /// included, and strings ordinally. A map or list is not a sortable key.
+    /// </para>
+    /// </remarks>
+    /// <param name="coll">A list, or a map whose values are sorted.</param>
+    /// <param name="f">Computes the sort key of an element.</param>
+    /// <returns>A new list of the elements in key order.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is not a collection, or a key is a map or list.</exception>
     public static DataList SortBy(DataValue coll, Func<DataValue, DataValue> f) =>
         DataList.Create(Elements(coll, "SortBy")
             .Select(element => (Element: element, Key: Sortable(f(element))))
             .OrderBy(pair => pair.Key, SortKeyOrder)
             .Select(pair => pair.Element));
 
+    /// <summary>
     /// Keys are checked as they are computed, not left to the comparer: a sort wraps
     /// whatever its comparer throws, and never calls it at all for a single element.
+    /// </summary>
     private static DataValue Sortable(DataValue key) =>
         key.IsComposite() ? throw NotSortable(key) : key;
 
+    /// <summary>
     /// Sorts maps by one of their fields.
+    /// </summary>
+    /// <param name="coll">A list of maps, or a map whose values are maps.</param>
+    /// <param name="field">The field whose value is the sort key.</param>
+    /// <returns>A new list of the elements in key order.</returns>
+    /// <exception cref="KeyNotFoundException">An element has no such field.</exception>
+    /// <inheritdoc cref="SortBy(DataValue, Func{DataValue, DataValue})" path="/remarks"/>
     public static DataList SortBy(DataValue coll, string field) =>
         SortBy(coll, row => Get(row, field));
 
@@ -106,8 +161,13 @@ public static partial class _
             _ => throw NotSortable(key)
         };
 
-    /// Maps over a list's values or a map's values, always producing a list
-    /// (as lodash does).
+    /// <summary>
+    /// Applies a function to each element, always producing a list (as lodash does).
+    /// </summary>
+    /// <param name="coll">A list, or a map whose values are mapped.</param>
+    /// <param name="f">Computes the new value for an element.</param>
+    /// <returns>A list of the results, in order.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static DataList Map(DataValue coll, Func<DataValue, DataValue> f) =>
         coll switch
         {
@@ -116,12 +176,22 @@ public static partial class _
             _ => throw new InvalidOperationException($"Cannot Map over a {coll.Describe()}")
         };
 
-    /// The elements of a list, or the values of a map, for which the predicate holds,
-    /// always as a list (as lodash does).
+    /// <summary>
+    /// Keeps the elements for which a predicate holds, always as a list (as lodash does).
+    /// </summary>
+    /// <param name="coll">A list, or a map whose values are filtered.</param>
+    /// <param name="predicate">The test applied to each element.</param>
+    /// <returns>A list of the elements that passed, in order.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static DataList Filter(DataValue coll, Func<DataValue, bool> predicate) =>
         DataList.Create(Elements(coll, "Filter").Where(predicate));
 
-    /// The keys of a map, or the indices of a list.
+    /// <summary>
+    /// Lists the keys of a map, or the indices of a list.
+    /// </summary>
+    /// <param name="obj">A map or a list.</param>
+    /// <returns>The keys in insertion order, or the indices <c>0..n-1</c>.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="obj"/> is neither a map nor a list.</exception>
     public static IReadOnlyList<StringOrInt> Keys(DataValue obj) =>
         obj switch
         {
@@ -130,9 +200,18 @@ public static partial class _
             _ => throw new InvalidOperationException($"A {obj.Describe()} has no keys")
         };
 
-    /// True for the composite cases -- the things a path can descend into.
+    /// <summary>
+    /// Tests whether a value is composite: the things a path can descend into.
+    /// </summary>
+    /// <param name="obj">The value to test.</param>
+    /// <returns>True for a map or a list.</returns>
     public static bool IsObject(DataValue obj) => obj.IsComposite();
 
+    /// <summary>
+    /// Tests whether a value is empty.
+    /// </summary>
+    /// <param name="obj">The value to test.</param>
+    /// <returns>True for an empty map or list. Any other value, null and scalars included, counts as empty.</returns>
     public static bool IsEmpty(DataValue obj) =>
         obj switch
         {
@@ -141,7 +220,15 @@ public static partial class _
             _ => true
         };
 
-    /// Folds over a list's values (with each index) or a map's values (with each key).
+    /// <summary>
+    /// Folds a collection into a single value.
+    /// </summary>
+    /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
+    /// <param name="coll">A list, folded with each element's index, or a map, folded with each value's key.</param>
+    /// <param name="f">Combines the accumulator, an element and its index or key into the next accumulator.</param>
+    /// <param name="initial">The starting accumulator.</param>
+    /// <returns>The final accumulator; <paramref name="initial"/> for an empty collection.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static TAcc Reduce<TAcc>(DataValue coll, Func<TAcc, DataValue, StringOrInt, TAcc> f, TAcc initial) =>
         coll switch
         {
@@ -151,6 +238,13 @@ public static partial class _
             _ => throw new InvalidOperationException($"Cannot Reduce a {coll.Describe()}")
         };
 
+    /// <summary>
+    /// Groups elements by a key computed for each.
+    /// </summary>
+    /// <param name="coll">A list, or a map whose values are grouped.</param>
+    /// <param name="f">Computes the group key of an element.</param>
+    /// <returns>A map from each key to the list of elements that produced it, in order of first appearance.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static DataMap GroupBy(DataValue coll, Func<DataValue, string> f)
     {
         var builder = DataMap.CreateBuilder();
@@ -172,24 +266,54 @@ public static partial class _
         return builder.ToDataMap();
     }
 
+    /// <summary>
+    /// Groups maps by the string value of one of their fields.
+    /// </summary>
+    /// <param name="coll">A list of maps, or a map whose values are maps.</param>
+    /// <param name="idKey">The field whose value is the group key.</param>
+    /// <returns>A map from each field value to the list of elements that held it.</returns>
+    /// <exception cref="KeyNotFoundException">An element has no such field.</exception>
+    /// <exception cref="InvalidOperationException">An element's field is not a string.</exception>
     public static DataMap GroupBy(DataValue coll, string idKey) =>
         GroupBy(coll, row => Get<string>(row, idKey));
 
-    /// Indexes a list's elements, or a map's values, by the key f gives each. Last
-    /// write wins on duplicate keys, as lodash does, and a key keeps the position of
-    /// its first appearance.
+    /// <summary>
+    /// Indexes elements by a key computed for each.
+    /// </summary>
+    /// <remarks>
+    /// Last write wins on duplicate keys, as lodash does, and a key keeps the position
+    /// of its first appearance.
+    /// </remarks>
+    /// <param name="coll">A list, or a map whose values are indexed.</param>
+    /// <param name="f">Computes the key of an element.</param>
+    /// <returns>A map from each key to its element.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
     public static DataMap KeyBy(DataValue coll, Func<DataValue, string> f) =>
         Elements(coll, "KeyBy")
             .Aggregate(DataMap.CreateBuilder(), (builder, element) => builder.Set(f(element), element))
             .ToDataMap();
 
-    /// Indexes a list of maps by one of their fields.
+    /// <summary>
+    /// Indexes maps by one of their fields.
+    /// </summary>
+    /// <param name="coll">A list of maps, or a map whose values are maps.</param>
+    /// <param name="key">The field whose string value is the key.</param>
+    /// <returns>A map from each field value to its element.</returns>
+    /// <exception cref="KeyNotFoundException">An element has no such field.</exception>
+    /// <exception cref="InvalidOperationException">An element's field is not a string.</exception>
+    /// <inheritdoc cref="KeyBy(DataValue, Func{DataValue, string})" path="/remarks"/>
     public static DataMap KeyBy(DataValue coll, string key) =>
         KeyBy(coll, row => Get<string>(row, key));
 
-    /// Diffs two nodes. Returns NoDiff when they are equivalent, otherwise the change:
-    /// for composites that is a nested structure holding only the differing leaves,
-    /// for leaves it is the new value.
+    /// <summary>
+    /// Diffs two nodes.
+    /// </summary>
+    /// <param name="data1">The original node.</param>
+    /// <param name="data2">The new node.</param>
+    /// <returns>
+    /// <see cref="NoDiff"/> when they are equivalent; otherwise <see cref="Changed"/>. For composites the change is
+    /// a nested structure holding only the differing leaves, for leaves it is the new value.
+    /// </returns>
     public static DiffResult Diff(DataValue data1, DataValue data2)
     {
         if (IsObject(data1) && IsObject(data2))
@@ -202,16 +326,25 @@ public static partial class _
         return data1.Equals(data2) ? NoDiff.Instance : new Changed(data2);
     }
 
-    /// Diffs two composites, returning a map holding only what differs. An empty
-    /// result means the two are equivalent.
-    ///
-    /// A diff is always a map, even when diffing lists -- list indices become string
+    /// <summary>
+    /// Diffs two composites, returning a map holding only what differs.
+    /// </summary>
+    /// <remarks>
+    /// An empty result means the two are equivalent.
+    /// <para>
+    /// A diff is always a map, even when diffing lists: list indices become string
     /// keys. Mirroring the list's shape instead would have to pad the unchanged slots,
     /// and that padding is indistinguishable from an element genuinely changed to null,
     /// which makes any merge over it silently wrong. Index keys carry only what changed.
-    ///
+    /// </para>
+    /// <para>
     /// A key present on only one side diffs against null, so additions show up as the
     /// new value and removals as null.
+    /// </para>
+    /// </remarks>
+    /// <param name="data1">The original value.</param>
+    /// <param name="data2">The new value.</param>
+    /// <returns>A map of the differences; apply it with <see cref="ApplyDiff(DataValue, DataMap)"/>.</returns>
     public static DataMap DiffObjects(DataValue data1, DataValue data2)
     {
         if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return DataMap.Empty;
@@ -226,31 +359,46 @@ public static partial class _
         return diff.ToDataMap();
     }
 
-    /// A leaf -- most usefully a null -- contributes no keys, so diffing an aggregate
+    /// <summary>
+    /// A leaf (most usefully a null) contributes no keys, so diffing an aggregate
     /// that does not exist yet against its first value reports every key as added.
     /// That makes creating an aggregate the same operation as changing one.
+    /// </summary>
     private static IReadOnlyList<StringOrInt> KeysOrEmpty(DataValue value) =>
         IsObject(value) ? Keys(value) : [];
 
-    /// List indices address a map as their string form, which Get and Set accept
+    /// <summary>
+    /// List indices address a map as their string form, which <c>Get</c> and <c>Set</c> accept
     /// on the way back into a list.
+    /// </summary>
     private static string KeyName(StringOrInt key) =>
         key switch { string s => s, int i => i.ToString() };
 
-    /// Every root-to-leaf path in a structure.
-    ///
-    /// Applied to a diff, this is the set of locations that diff touches -- which is
+    /// <summary>
+    /// Lists every root-to-leaf path in a structure.
+    /// </summary>
+    /// <remarks>
+    /// Applied to a diff, this is the set of locations that diff touches, which is
     /// what decides whether two concurrent changes conflict.
+    /// </remarks>
+    /// <param name="value">The structure to walk.</param>
+    /// <returns>One path per leaf. An empty map or list counts as a leaf, and a scalar yields the root path.</returns>
+    /// <seealso cref="ChangedPaths"/>
     public static IReadOnlyList<DataPath> InformationPaths(DataValue value) =>
         Collect(value, DataPath.Root, []);
 
-    /// The paths a diff touches.
-    ///
-    /// An empty diff touches nothing. That is not what InformationPaths says, which
-    /// reports the root of an empty map as a touched location -- correct for data
-    /// (setting a field to {} is a change), wrong for a diff (no change at all). The
+    /// <summary>
+    /// Lists the paths a diff touches.
+    /// </summary>
+    /// <remarks>
+    /// An empty diff touches nothing. That is not what <see cref="InformationPaths"/> says, which
+    /// reports the root of an empty map as a touched location: correct for data
+    /// (setting a field to <c>{}</c> is a change), wrong for a diff (no change at all). The
     /// difference matters once overlap is prefix-aware, because the root path is a
     /// prefix of everything and would collide with every concurrent write.
+    /// </remarks>
+    /// <param name="diff">A diff, as produced by <see cref="DiffObjects"/>.</param>
+    /// <returns>The paths the diff changes; empty for an empty diff.</returns>
     public static IReadOnlyList<DataPath> ChangedPaths(DataMap diff) =>
         diff.IsEmpty ? [] : InformationPaths(diff);
 
