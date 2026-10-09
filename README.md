@@ -50,7 +50,7 @@ The generic functions live in `DataFirst.Lodash` as static methods on `_`. Every
 | `at` | `At` | keys, or paths |
 | `get` | `Get`, `GetOrNull` | `GetOrNull` yields null rather than throwing |
 | `has` | `ContainsKey` | one key, or a path |
-| `merge` | `Merge` | recursive; maps by key, lists by index, the second wins |
+| `merge` | `Merge` | recursive: maps merge by key and lists by index at every depth; anything else takes the second value, null included. Not the same as `ApplyDiff` |
 | `omit` | `Omit` | by path; absent paths are skipped, and list elements cannot be removed |
 | `set` | `Set` | writes through a path, creating missing containers |
 | `values` | `Values` | |
