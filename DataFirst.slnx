@@ -2,4 +2,5 @@
   <Project Path="test/DataFirst.Tests/DataFirst.Tests.csproj" />
   <Project Path="src/DataFirst/DataFirst.csproj" />
   <Project Path="src/DataFirst.Library/DataFirst.Library.csproj" />
+  <Project Path="src/DataFirst.Database/DataFirst.Database.csproj" />
 </Solution>

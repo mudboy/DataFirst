@@ -13,9 +13,9 @@ src/
     Lodash/               generic functions over data: At, Get, Set, Update, Merge, Diff, GroupBy, KeyBy, Unwind, ...
     Validation/           schemas and validation results
     Store/                aggregate stores (snapshot and diff-indexed) behind IAggregateStore
-    Db.cs                 reads database results into data
     SystemState.cs, SystemConsistency.cs
                           the versioned state and how concurrent changes are reconciled
+  DataFirst.Database/     SQLite access: Db.cs reads results into data, With.cs is a throwaway test database
   DataFirst.Library/      the library domain, built on the core
     Library.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs
                           users, books, lending and the aggregate boundaries

@@ -23,6 +23,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\DataFirst\DataFirst.csproj" />
       <ProjectReference Include="..\..\src\DataFirst.Library\DataFirst.Library.csproj" />
+      <ProjectReference Include="..\..\src\DataFirst.Database\DataFirst.Database.csproj" />
     </ItemGroup>
 
 </Project>
