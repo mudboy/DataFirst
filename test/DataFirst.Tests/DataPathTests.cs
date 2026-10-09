@@ -74,6 +74,60 @@ public sealed class DataPathTests
     }
 
     [Fact]
+    public void A_collection_expression_builds_the_same_path_as_Of()
+    {
+        DataPath literal = ["x", 1, "B"];
+
+        literal.Equals(DataPath.Of("x", 1, "B")).Should().BeTrue();
+        literal.GetHashCode().Should().Be(DataPath.Of("x", 1, "B").GetHashCode());
+        literal.ToString().Should().Be("x.[1].B");
+    }
+
+    [Fact]
+    public void An_empty_collection_expression_is_the_root_and_a_lone_step_is_a_one_step_path()
+    {
+        DataPath empty = [];
+        DataPath single = ["a"];
+
+        empty.Equals(DataPath.Root).Should().BeTrue();
+        single.Equals(DataPath.Of("a")).Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_literal_can_be_passed_wherever_a_path_is_expected()
+    {
+        var map = Map.Of(("a", 1), ("b", Map.Of(("c", 2), ("d", 3))));
+
+        _.Omit(map, [["a"], ["b", "c"]]).ShouldEqual(Map.Of(("b", Map.Of(("d", 3)))));
+        SameAs(["x", 1, "B"], DataPath.Of("x", 1, "B")).Should().BeTrue();
+    }
+
+    [Property]
+    public bool Spreading_a_path_into_a_literal_rebuilds_it(DataPath path)
+    {
+        DataPath rebuilt = [.. path];
+        return rebuilt.Equals(path) && rebuilt.GetHashCode() == path.GetHashCode();
+    }
+
+    [Property]
+    public bool A_literal_can_extend_a_path_with_a_spread(DataPath path, StringOrInt step)
+    {
+        DataPath extended = [.. path, step];
+        return extended.Equals(path.Then(step));
+    }
+
+    [Property]
+    public bool Building_from_a_literal_copies_the_steps(DataPath path)
+    {
+        var steps = path.ToArray();
+        DataPath built = [.. steps];
+        if (steps.Length > 0) steps[0] = "changed";
+        return built.Equals(path);
+    }
+
+    private static bool SameAs(DataPath actual, DataPath expected) => actual.Equals(expected);
+
+    [Fact]
     public void Paths_work_as_set_members()
     {
         var set = new HashSet<DataPath> { DataPath.Of("a", 1), DataPath.Of("a", 1), DataPath.Of("a", 2) };

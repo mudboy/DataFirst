@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace DataFirst;
 
@@ -15,8 +16,11 @@ namespace DataFirst;
 /// var firstAuthor = DataPath.Of("authors", 0, "name");   // keys and indices mix freely
 /// title.ToString()          // catalog.booksByIsbn.978-1779501127.title
 /// firstAuthor.ToString()    // authors.[0].name
+///
+/// DataPath fromLiteral = ["authors", 0, "name"];   // a collection expression builds the same path
 /// </code>
 /// </example>
+[CollectionBuilder(typeof(DataPath), nameof(Create))]
 public sealed class DataPath : IEquatable<DataPath>, IReadOnlyList<StringOrInt>
 {
     /// <summary>The empty path, which addresses a structure itself.</summary>
@@ -52,6 +56,20 @@ public sealed class DataPath : IEquatable<DataPath>, IReadOnlyList<StringOrInt>
     /// <param name="steps">The map keys and list indices to follow, in order. The sequence is copied.</param>
     /// <returns>A new path.</returns>
     public static DataPath Of(IEnumerable<StringOrInt> steps) => new(steps.ToArray());
+
+    /// <summary>
+    /// Builds a path from a collection expression, which is what lets a path be written
+    /// as a literal wherever a <see cref="DataPath"/> is expected.
+    /// </summary>
+    /// <param name="steps">The map keys and list indices to follow, in order.</param>
+    /// <returns>A new path. An empty literal equals <see cref="Root"/>.</returns>
+    /// <example>
+    /// <code>
+    /// DataPath path = ["items", 1, "id"];
+    /// DataPath root = [];
+    /// </code>
+    /// </example>
+    public static DataPath Create(ReadOnlySpan<StringOrInt> steps) => new(steps.ToArray());
 
     /// <summary>The number of steps. The root has none.</summary>
     public int Count => steps.Length;
