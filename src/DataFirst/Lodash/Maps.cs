@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace DataFirst.Lodash;
 
 /// <summary>
@@ -33,6 +35,7 @@ public static partial class _
     /// _.At(book, "title", "isbn")   // ["Watchmen", "978-1779501127"]
     /// </code>
     /// </example>
+    [OverloadResolutionPriority(1)]
     public static DataList At(DataValue obj, params IEnumerable<StringOrInt> keys) =>
         DataList.Create(keys.Select(key => GetOrNull(obj, key)));
 
@@ -41,7 +44,8 @@ public static partial class _
     /// </summary>
     /// <remarks>
     /// Takes a collection rather than <c>params</c>, because two variadic overloads would
-    /// be ambiguous for the empty call.
+    /// be ambiguous for the empty call. The keys overload is preferred for the literal
+    /// <c>[]</c>, which both overloads accept and which reads nothing either way.
     /// </remarks>
     /// <param name="obj">The value to read from.</param>
     /// <param name="paths">The paths to read, in the order the values are wanted.</param>

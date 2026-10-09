@@ -234,6 +234,25 @@ public sealed class GetSetTests
     }
 
     [Fact]
+    public void At_accepts_an_empty_literal_without_being_ambiguous()
+    {
+        // Both overloads accept [], so it needs OverloadResolutionPriority to compile at all.
+        _.At(Map.Of(("a", 1)), []).ShouldEqual(DataList.Empty);
+    }
+
+    [Fact]
+    public void The_priority_does_not_change_which_overload_a_non_empty_literal_picks()
+    {
+        var map = Map.Of(("a", 1), ("b", 2), ("c", Map.Of(("d", 3))));
+
+        _.At(map, ["a", "b"]).ShouldEqual(List.Of(1, 2));                     // keys
+        _.At(map, ["a", 5]).ShouldEqual(List.Of(1, DataNull.Instance));       // keys, one absent
+        _.At(map, [["a"], ["c", "d"]]).ShouldEqual(List.Of(1, 3));            // paths
+        _.At(map, [["c", "d"]]).ShouldEqual(List.Of(3));                      // a single path
+        _.At(map, [DataPath.Of("c", "d")]).ShouldEqual(List.Of(3));           // explicit path
+    }
+
+    [Fact]
     public void At_with_no_keys_is_empty()
     {
         _.At(Map.Of(("a", 1))).ShouldEqual(DataList.Empty);
