@@ -114,33 +114,41 @@ public static partial class _
     /// The total of a list of numbers.
     /// </summary>
     /// <remarks>
-    /// The result is a long when every element is a long, otherwise a double. The sum
-    /// of nothing is 0. Overflow throws rather than wrapping, and a non-number is an
-    /// error rather than being skipped.
+    /// The result is a long when every number is a long, otherwise a double. The sum
+    /// of nothing is 0. Overflow throws rather than wrapping.
+    ///
+    /// A null is an absent value, so it counts as nothing: skipping it is the same as
+    /// adding 0, and a list of only nulls sums to 0, as SQL's SUM does. Any other
+    /// non-number is an error rather than being skipped or coerced, because dropping
+    /// a string or a map would quietly give a wrong total.
     /// </remarks>
-    /// <param name="list">The numbers to add up.</param>
+    /// <param name="list">The numbers to add up, with any nulls ignored.</param>
     /// <returns>The sum, as a long or a double.</returns>
-    /// <exception cref="InvalidOperationException">An element is not a number.</exception>
+    /// <exception cref="InvalidOperationException">An element is neither a number nor null.</exception>
     /// <exception cref="OverflowException">A sum of longs does not fit in a long.</exception>
     /// <example>
     /// <code>
     /// _.Sum(List.Of(1, 2, 3))     // 6, a long
     /// _.Sum(List.Of(1, 2.5))      // 3.5, a double
     /// _.Sum(List.Of())            // 0
+    /// _.Sum(List.Of(1, null, 2))  // 3, the null counts as nothing
     /// </code>
     /// </example>
     public static DataValue Sum(DataList list) =>
-        list.All(value => value is long)
-            ? (DataValue)list.Aggregate(0L, (total, value) => checked(total + value.As<long>()))
-            : list.All(value => value is long or double)
-                ? (DataValue)list.Sum(value => value switch
+        SumNumbers(list.Where(value => value is not DataNull).ToList());
+
+    private static DataValue SumNumbers(IReadOnlyList<DataValue> numbers) =>
+        numbers.All(value => value is long)
+            ? (DataValue)numbers.Aggregate(0L, (total, value) => checked(total + value.As<long>()))
+            : numbers.All(value => value is long or double)
+                ? (DataValue)numbers.Sum(value => value switch
                 {
                     long n => (double)n,
                     double d => d,
                     _ => throw new InvalidOperationException($"Cannot Sum a {value.Describe()}")
                 })
                 : throw new InvalidOperationException(
-                    $"Cannot Sum a list containing a {list.First(value => value is not (long or double)).Describe()}");
+                    $"Cannot Sum a list containing a {numbers.First(value => value is not (long or double)).Describe()}");
 
     /// <summary>
     /// Replaces the element at an index, or extends the list when the index is past the end.

@@ -230,7 +230,41 @@ public sealed class ArrayFunctionTests
     {
         new Action(() => _.Sum(List.Of(1, "2"))).Should().Throw<InvalidOperationException>().WithMessage("*string*");
         new Action(() => _.Sum(List.Of(1.5, true))).Should().Throw<InvalidOperationException>().WithMessage("*bool*");
-        new Action(() => _.Sum(List.Of(1, DataNull.Instance))).Should().Throw<InvalidOperationException>().WithMessage("*null*");
+        new Action(() => _.Sum(List.Of(DataNull.Instance, 1, "2"))).Should().Throw<InvalidOperationException>().WithMessage("*string*");
+        new Action(() => _.Sum(List.Of(1, Map.Of(("a", 1))))).Should().Throw<InvalidOperationException>().WithMessage("*map*");
+    }
+
+    [Property]
+    public Property Sum_treats_a_null_anywhere_as_nothing() =>
+        Over(ListGens.Longs, a =>
+        {
+            var padded = DataList.Create(a.SelectMany(v => new[] { DataNull.Instance, v }).Append(DataNull.Instance).ToList());
+            return _.Sum(padded).Equals(_.Sum(a));
+        });
+
+    [Property]
+    public Property Sum_with_nulls_keeps_the_result_type() =>
+        Over(ListGens.Longs.Where(l => !l.IsEmpty), a =>
+            _.Sum(a.Add(DataNull.Instance)).Unwrap() is long
+            && _.Sum(a.Add(DataNull.Instance).Add(0.5)).Unwrap() is double);
+
+    [Property]
+    public Property Sum_over_a_concatenation_still_adds_when_nulls_are_present() =>
+        Over2(ListGens.Longs, (a, b) =>
+            _.Sum(_.Concat(a.Add(DataNull.Instance), b)).Equals(_.Sum(_.Concat(a, b))));
+
+    [Fact]
+    public void Sum_of_only_nulls_is_zero_a_long_like_the_sum_of_nothing()
+    {
+        _.Sum(List.Of(DataNull.Instance, DataNull.Instance)).Unwrap().Should().Be(0L);
+        _.Sum(List.Of(DataNull.Instance)).Equals(_.Sum(DataList.Empty)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Sum_skips_nulls_among_numbers()
+    {
+        _.Sum(List.Of(1, DataNull.Instance, 2)).Equals((DataValue)3L).Should().BeTrue();
+        _.Sum(List.Of(DataNull.Instance, 1.5, 2)).Equals((DataValue)3.5).Should().BeTrue();
     }
 
     [Fact]

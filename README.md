@@ -61,7 +61,7 @@ The generic functions live in `DataFirst.Lodash` as static methods on `_`. Every
 | `flatten` | `Flatten` | one level |
 | `intersection` | `Intersection` | |
 | `nth` | `Nth` | negative counts from the end; out of range is null |
-| `sum` | `Sum` | a long for all-long input, otherwise a double |
+| `sum` | `Sum` | a long for all-long input, otherwise a double; nulls count as nothing, any other non-number throws |
 | `union` | `Union` | |
 | `uniq` | `Uniq` | |
 
