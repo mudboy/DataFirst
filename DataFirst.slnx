@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="DataFirst.Tests/DataFirst.Tests.csproj" />
-  <Project Path="DataFirst/DataFirst.csproj" />
+  <Project Path="test/DataFirst.Tests/DataFirst.Tests.csproj" />
+  <Project Path="src/DataFirst/DataFirst.csproj" />
 </Solution>
