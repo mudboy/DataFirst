@@ -12,7 +12,10 @@ global.json               SDK pin
 src/
   DataFirst/              the generic core
     Data/                 DataValue, DataMap, DataList, DataPath: the immutable data representation
-    Lodash/               generic functions over data: At, Get, Set, Update, Merge, Diff, GroupBy, KeyBy, Unwind, ...
+    Lodash/               generic functions over data, in three files named for the appendix groups:
+                          Maps.cs (At, Get, Set, Merge, Omit, ...), Arrays.cs (Concat, Uniq, Union, Sum, ...),
+                          Collections.cs (Map, Filter, GroupBy, SortBy, Diff, ...);
+                          plus the Map and List literals, Getter, and the DiffResult type
     Validation/           the schema validator and its results
     Store/                aggregate stores (snapshot and diff-indexed) behind IAggregateStore
     SystemState.cs, SystemConsistency.cs

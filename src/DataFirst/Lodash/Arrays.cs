@@ -27,6 +27,11 @@ public static partial class _
     /// The distinct values present in either list, first list's order first.
     public static DataList Union(DataList first, DataList second) => Uniq(Concat(first, second));
 
+    /// The same for lists of keys, which is how Diff pairs up the keys of two nodes.
+    public static IReadOnlyList<StringOrInt> Union(
+        IReadOnlyList<StringOrInt> first, IReadOnlyList<StringOrInt> second) =>
+        first.Concat(second).Distinct().ToList();
+
     /// The element at index n; a negative n counts back from the end, as in lodash.
     /// An index outside the list yields null rather than throwing, like GetOrNull.
     public static DataValue Nth(DataList list, int n) =>
@@ -49,4 +54,34 @@ public static partial class _
                 })
                 : throw new InvalidOperationException(
                     $"Cannot Sum a list containing a {list.First(value => value is not (long or double)).Describe()}");
+
+    /// Replaces the element at index, or extends the list (padding with nulls)
+    /// when index is past the end. Unlike InsertAt this never grows a list whose
+    /// index already exists.
+    public static DataList SetAt(DataList list, int index, DataValue value) =>
+        index < list.Count
+            ? list.SetItem(index, value)
+            : list.PadTo(index).Add(value);
+
+    /// Inserts before the element at index, growing the list.
+    public static DataList InsertAt(DataList list, int index, DataValue value) =>
+        index <= list.Count
+            ? list.Insert(index, value)
+            : list.PadTo(index).Add(value);
+
+    /// Collapses rows sharing an id into one row, gathering fieldName into a list.
+    public static DataList AggregateFields(
+        DataList rows, string idFieldName, string fieldName, string aggregateFieldName)
+    {
+        var rowsByIdField = GroupBy(rows, idFieldName);
+        var groupedRows = Values(rowsByIdField);
+        return Map(groupedRows, group => AggregateField(group.As<DataList>(), fieldName, aggregateFieldName));
+    }
+
+    public static DataMap AggregateField(DataList rows, string fieldName, string newName)
+    {
+        var aggregatedValues = Map(rows, row => Get(row, fieldName));
+        var firstRow = rows[0].As<DataMap>();
+        return firstRow.SetItem(newName, aggregatedValues).Remove(fieldName);
+    }
 }

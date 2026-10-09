@@ -105,4 +105,166 @@ public static partial class _
             string => 3,
             _ => throw NotSortable(key)
         };
+
+    /// Maps over a list's values or a map's values, always producing a list
+    /// (as lodash does).
+    public static DataList Map(DataValue coll, Func<DataValue, DataValue> f) =>
+        coll switch
+        {
+            DataMap m => DataList.Create(m.Values.Select(f)),
+            DataList l => DataList.Create(l.Select(f)),
+            _ => throw new InvalidOperationException($"Cannot Map over a {coll.Describe()}")
+        };
+
+    /// The elements of a list, or the values of a map, for which the predicate holds,
+    /// always as a list (as lodash does).
+    public static DataList Filter(DataValue coll, Func<DataValue, bool> predicate) =>
+        DataList.Create(Elements(coll, "Filter").Where(predicate));
+
+    /// The keys of a map, or the indices of a list.
+    public static IReadOnlyList<StringOrInt> Keys(DataValue obj) =>
+        obj switch
+        {
+            DataMap m => m.Keys.Select(k => (StringOrInt)k).ToList(),
+            DataList l => Enumerable.Range(0, l.Count).Select(i => (StringOrInt)i).ToList(),
+            _ => throw new InvalidOperationException($"A {obj.Describe()} has no keys")
+        };
+
+    /// True for the composite cases -- the things a path can descend into.
+    public static bool IsObject(DataValue obj) => obj.IsComposite();
+
+    public static bool IsEmpty(DataValue obj) =>
+        obj switch
+        {
+            DataMap m => m.IsEmpty,
+            DataList l => l.IsEmpty,
+            _ => true
+        };
+
+    /// Folds over a list's values (with each index) or a map's values (with each key).
+    public static TAcc Reduce<TAcc>(DataValue coll, Func<TAcc, DataValue, StringOrInt, TAcc> f, TAcc initial) =>
+        coll switch
+        {
+            DataMap m => m.Aggregate(initial, (acc, pair) => f(acc, pair.Value, pair.Key)),
+            DataList l => l.Select((value, index) => (value, index))
+                .Aggregate(initial, (acc, item) => f(acc, item.value, item.index)),
+            _ => throw new InvalidOperationException($"Cannot Reduce a {coll.Describe()}")
+        };
+
+    public static DataMap GroupBy(DataValue coll, Func<DataValue, string> f)
+    {
+        var builder = DataMap.CreateBuilder();
+
+        switch (coll)
+        {
+            case DataMap m:
+                foreach (var group in m.Values.GroupBy(f))
+                    builder.Set(group.Key, DataList.Create(group));
+                break;
+            case DataList l:
+                foreach (var group in l.GroupBy(f))
+                    builder.Set(group.Key, DataList.Create(group));
+                break;
+            default:
+                throw new InvalidOperationException($"Cannot GroupBy a {coll.Describe()}");
+        }
+
+        return builder.ToDataMap();
+    }
+
+    public static DataMap GroupBy(DataValue coll, string idKey) =>
+        GroupBy(coll, row => Get<string>(row, idKey));
+
+    /// Indexes a list's elements, or a map's values, by the key f gives each. Last
+    /// write wins on duplicate keys, as lodash does, and a key keeps the position of
+    /// its first appearance.
+    public static DataMap KeyBy(DataValue coll, Func<DataValue, string> f) =>
+        Elements(coll, "KeyBy")
+            .Aggregate(DataMap.CreateBuilder(), (builder, element) => builder.Set(f(element), element))
+            .ToDataMap();
+
+    /// Indexes a list of maps by one of their fields.
+    public static DataMap KeyBy(DataValue coll, string key) =>
+        KeyBy(coll, row => Get<string>(row, key));
+
+    /// Diffs two nodes. Returns NoDiff when they are equivalent, otherwise the change:
+    /// for composites that is a nested structure holding only the differing leaves,
+    /// for leaves it is the new value.
+    public static DiffResult Diff(DataValue data1, DataValue data2)
+    {
+        if (IsObject(data1) && IsObject(data2))
+        {
+            var diffed = DiffObjects(data1, data2);
+            return IsEmpty(diffed) ? NoDiff.Instance : new Changed(diffed);
+        }
+
+        // leafs
+        return data1.Equals(data2) ? NoDiff.Instance : new Changed(data2);
+    }
+
+    /// Diffs two composites, returning a map holding only what differs. An empty
+    /// result means the two are equivalent.
+    ///
+    /// A diff is always a map, even when diffing lists -- list indices become string
+    /// keys. Mirroring the list's shape instead would have to pad the unchanged slots,
+    /// and that padding is indistinguishable from an element genuinely changed to null,
+    /// which makes any merge over it silently wrong. Index keys carry only what changed.
+    ///
+    /// A key present on only one side diffs against null, so additions show up as the
+    /// new value and removals as null.
+    public static DataMap DiffObjects(DataValue data1, DataValue data2)
+    {
+        if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return DataMap.Empty;
+
+        var keys = Union(KeysOrEmpty(data1), KeysOrEmpty(data2));
+        var diff = DataMap.CreateBuilder();
+
+        foreach (var key in keys)
+            if (Diff(GetOrNull(data1, key), GetOrNull(data2, key)) is Changed(var value))
+                diff.Set(KeyName(key), value);
+
+        return diff.ToDataMap();
+    }
+
+    /// A leaf -- most usefully a null -- contributes no keys, so diffing an aggregate
+    /// that does not exist yet against its first value reports every key as added.
+    /// That makes creating an aggregate the same operation as changing one.
+    private static IReadOnlyList<StringOrInt> KeysOrEmpty(DataValue value) =>
+        IsObject(value) ? Keys(value) : [];
+
+    /// List indices address a map as their string form, which Get and Set accept
+    /// on the way back into a list.
+    private static string KeyName(StringOrInt key) =>
+        key switch { string s => s, int i => i.ToString() };
+
+    /// Every root-to-leaf path in a structure.
+    ///
+    /// Applied to a diff, this is the set of locations that diff touches -- which is
+    /// what decides whether two concurrent changes conflict.
+    public static IReadOnlyList<DataPath> InformationPaths(DataValue value) =>
+        Collect(value, DataPath.Root, []);
+
+    /// The paths a diff touches.
+    ///
+    /// An empty diff touches nothing. That is not what InformationPaths says, which
+    /// reports the root of an empty map as a touched location -- correct for data
+    /// (setting a field to {} is a change), wrong for a diff (no change at all). The
+    /// difference matters once overlap is prefix-aware, because the root path is a
+    /// prefix of everything and would collide with every concurrent write.
+    public static IReadOnlyList<DataPath> ChangedPaths(DataMap diff) =>
+        diff.IsEmpty ? [] : InformationPaths(diff);
+
+    private static List<DataPath> Collect(DataValue value, DataPath path, List<DataPath> acc)
+    {
+        // An empty composite is a leaf: there is nothing inside it to descend to,
+        // and it still marks this location as touched.
+        if (!IsObject(value) || IsEmpty(value))
+        {
+            acc.Add(path);
+            return acc;
+        }
+
+        foreach (var key in Keys(value)) Collect(Get(value, key), path.Then(key), acc);
+        return acc;
+    }
 }
