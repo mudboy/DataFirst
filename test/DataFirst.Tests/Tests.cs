@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 using DataFirst.Lodash;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace DataFirst.Tests;
@@ -8,7 +8,7 @@ namespace DataFirst.Tests;
 public sealed class Tests
 {
     /// Asserts through DataMap/DataList's own structural equality. Both implement
-    /// IEnumerable, so a plain Should().Be() would route to FluentAssertions'
+    /// IEnumerable, so a plain Should().Be() would route to AwesomeAssertions'
     /// collection assertions and walk members instead. Failure messages print the
     /// values as JSON.
     private static void ShouldEqual(object actual, object expected) =>
