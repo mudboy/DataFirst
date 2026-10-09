@@ -231,4 +231,24 @@ public sealed class DebugDumpTests : IDisposable
     {
         new Action(() => Debug.Dump(context, 1L)).Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void Dump_writes_the_data_not_a_wrapper()
+    {
+        // Previously this threw: the directory was never created, the method name was
+        // a typo, and JsonSerializer wrote the wrapper rather than the data.
+        var path = Debug.Dump($"dump-{Guid.NewGuid():N}", Map.Of(
+            ("title", "Watchmen"),
+            ("authorIds", List.Of("alan-moore"))));
+
+        try
+        {
+            File.ReadAllText(path).Should()
+                .Be("""{"title":"Watchmen","authorIds":["alan-moore"]}""");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
