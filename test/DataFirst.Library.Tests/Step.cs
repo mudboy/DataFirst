@@ -7,7 +7,7 @@ using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Library.Tests;
 
 /// One step of a random history: which earlier read to work from, and which key to set.
 /// Every write stores a fresh number, so no key ever returns to an earlier value --

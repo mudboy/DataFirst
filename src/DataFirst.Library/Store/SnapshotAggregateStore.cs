@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// An aggregate store that retains the value of every version.
 ///

@@ -1,13 +1,12 @@
 using System.Collections.Immutable;
 using DataFirst.Testing;
-using DataFirst.Database;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using Xunit;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Library.Tests;
 
-public sealed class ConcurrentChangeTests
+public sealed class StoreConflictTests
 {
     // ---- IAggregateStore: the two implementations must agree ----
 
@@ -86,5 +85,19 @@ public sealed class ConcurrentChangeTests
         var second = store.Commit(book, version, _.DiffObjects(start, _.Set(start, ["items", 1], "B")));
 
         (_.Get(second.Value, "items").As<DataList>()).ShouldEqual(List.Of("A", "B"));
+    }
+
+    [Fact]
+    public void Should_Treat_An_Empty_Diff_As_Touching_Nothing()
+    {
+        // InformationPaths reports the root of an empty map, because setting a field
+        // to {} really is a change. A diff is different: empty means nothing moved,
+        // and the root would otherwise be a prefix of every concurrent write.
+        _.InformationPaths(Map.Of()).Select(p => p.ToString()).Should().Equal("(root)");
+        _.ChangedPaths(Map.Of()).Should().BeEmpty();
+
+        var busy = _.DiffObjects(Map.Of(("a", 1)), Map.Of(("a", 2)));
+        Conflicts.CommonPaths(Map.Of(), busy).Should().BeEmpty();
+        Conflicts.CommonPaths(busy, Map.Of()).Should().BeEmpty();
     }
 }

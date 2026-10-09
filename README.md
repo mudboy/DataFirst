@@ -17,11 +17,11 @@ src/
                           Collections.cs (Map, Filter, GroupBy, SortBy, Diff, ...);
                           plus the Map and List literals, Getter, and the DiffResult type
     Validation/           the schema validator and its results
-    Store/                aggregate stores (snapshot and diff-indexed) behind IAggregateStore, plus conflict detection
   DataFirst.Database/     SQLite access: Db.cs reads results into data, With.cs is a throwaway test database
   DataFirst.Library/      the library domain, built on the core
     LibraryOperations.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs, Schemas.cs, SystemState.cs, SystemConsistency.cs
                           users, books, lending, the aggregate boundaries, and the versioned state with its reconciliation
+    Store/                aggregate stores (snapshot and diff-indexed) behind IAggregateStore, plus conflict detection
 test/
   DataFirst.Tests/              tests for the core and database (one file per test class)
   DataFirst.Library.Tests/      tests for the library domain
@@ -30,7 +30,7 @@ test/
 
 ## Namespaces
 
-- `DataFirst`: the data types, stores and conflict detection.
+- `DataFirst`: the data types.
 - `DataFirst.Database`: SQLite access.
 - `DataFirst.Library`: the library domain.
 - `DataFirst.Lodash`: the generic data functions.

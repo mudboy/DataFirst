@@ -1,4 +1,4 @@
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// Raised when two mutations, started from the same version, changed the same
 /// location, so neither can be applied on top of the other without losing one.

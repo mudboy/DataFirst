@@ -7,7 +7,7 @@ using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Library.Tests;
 
 public sealed class SnapshotStoreHistoryTests
 {

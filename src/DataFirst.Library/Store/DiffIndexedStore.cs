@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// An aggregate store that retains only which paths changed, and only recently.
 ///

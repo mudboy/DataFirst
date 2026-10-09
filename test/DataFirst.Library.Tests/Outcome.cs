@@ -7,7 +7,7 @@ using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Library.Tests;
 
 /// What one commit did, reduced to what both stores must agree on.
 public abstract record Outcome

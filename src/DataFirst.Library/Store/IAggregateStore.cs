@@ -1,4 +1,4 @@
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// A value read from the store, with the version it was read at.
 ///

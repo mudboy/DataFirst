@@ -147,19 +147,6 @@ public sealed class DiffAndMergeTests
         (_.ApplyDiff(DataNull.Instance, _.DiffObjects(DataNull.Instance, list)).As<DataMap>()).ShouldEqual(Map.Of(("0", "a"), ("1", "b")));
     }
     [Fact]
-    public void Should_Treat_An_Empty_Diff_As_Touching_Nothing()
-    {
-        // InformationPaths reports the root of an empty map, because setting a field
-        // to {} really is a change. A diff is different: empty means nothing moved,
-        // and the root would otherwise be a prefix of every concurrent write.
-        _.InformationPaths(Map.Of()).Select(p => p.ToString()).Should().Equal("(root)");
-        _.ChangedPaths(Map.Of()).Should().BeEmpty();
-
-        var busy = _.DiffObjects(Map.Of(("a", 1)), Map.Of(("a", 2)));
-        Conflicts.CommonPaths(Map.Of(), busy).Should().BeEmpty();
-        Conflicts.CommonPaths(busy, Map.Of()).Should().BeEmpty();
-    }
-    [Fact]
     public void Probe_MergeIntoMissingPath()
     {
         var previous = Map.Of(("book", Map.Of(("title", "Watchmen"))));

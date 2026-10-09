@@ -1,6 +1,6 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 public static class Conflicts
 {
