@@ -21,6 +21,12 @@ public static partial class _
     /// <param name="predicate">The test applied to each element.</param>
     /// <returns>True when the predicate holds for every element; an empty collection satisfies it vacuously.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.Every(List.Of(2, 4), n => n.As&lt;long&gt;() % 2 == 0)   // true
+    /// _.Every(List.Of(), n => false)                          // true: nothing to contradict it
+    /// </code>
+    /// </example>
     public static bool Every(DataValue coll, Func<DataValue, bool> predicate) =>
         Elements(coll, "Every over").All(predicate);
 
@@ -35,6 +41,12 @@ public static partial class _
     /// <param name="predicate">The test applied to each element.</param>
     /// <returns>The first matching element, or <see cref="DataNull"/> when none matches.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.Find(List.Of(1, 2, 3), n => n.As&lt;long&gt;() > 1)    // 2
+    /// _.Find(List.Of(1, 2, 3), n => n.As&lt;long&gt;() > 9)    // null
+    /// </code>
+    /// </example>
     public static DataValue Find(DataValue coll, Func<DataValue, bool> predicate) =>
         Elements(coll, "Find in").Cast<DataValue?>().FirstOrDefault(element => predicate(element!.Value))
         ?? (DataValue)DataNull.Instance;
@@ -46,6 +58,11 @@ public static partial class _
     /// <param name="f">The action to run for each element.</param>
     /// <returns><paramref name="coll"/> itself, so the call can sit in the middle of a pipeline.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.ForEach(List.Of("a", "b"), item => Console.WriteLine(item));   // prints a, then b
+    /// </code>
+    /// </example>
     public static DataValue ForEach(DataValue coll, Action<DataValue> f)
     {
         foreach (var element in Elements(coll, "ForEach over")) f(element);
@@ -58,6 +75,12 @@ public static partial class _
     /// <param name="coll">A list or a map.</param>
     /// <returns>The number of elements or entries.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.Size(List.Of("a", "b"))        // 2
+    /// _.Size(Map.Of(("a", 1)))         // 1
+    /// </code>
+    /// </example>
     public static int Size(DataValue coll) =>
         coll switch
         {
@@ -71,6 +94,12 @@ public static partial class _
     /// </summary>
     /// <param name="value">The value to test.</param>
     /// <returns>True when the value is a <see cref="DataList"/>.</returns>
+    /// <example>
+    /// <code>
+    /// _.IsArray(List.Of())    // true
+    /// _.IsArray(Map.Of())     // false
+    /// </code>
+    /// </example>
     public static bool IsArray(DataValue value) => value is DataList;
 
     /// <summary>
@@ -84,6 +113,12 @@ public static partial class _
     /// <param name="first">The first value.</param>
     /// <param name="second">The second value.</param>
     /// <returns>True when the two are equal.</returns>
+    /// <example>
+    /// <code>
+    /// _.IsEqual(Map.Of(("a", 1), ("b", 2)), Map.Of(("b", 2), ("a", 1)))   // true: key order is ignored
+    /// _.IsEqual(1L, 1.0)                                                  // false: a long is not a double
+    /// </code>
+    /// </example>
     public static bool IsEqual(DataValue first, DataValue second) => first.Equals(second);
 
     /// <summary>
@@ -102,6 +137,12 @@ public static partial class _
     /// <param name="f">Computes the sort key of an element.</param>
     /// <returns>A new list of the elements in key order.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is not a collection, or a key is a map or list.</exception>
+    /// <example>
+    /// <code>
+    /// _.SortBy(List.Of(3, 1, 2), n => n)                               // [1, 2, 3]
+    /// _.SortBy(books, book => _.Get(book, "publicationYear"))          // oldest first
+    /// </code>
+    /// </example>
     public static DataList SortBy(DataValue coll, Func<DataValue, DataValue> f) =>
         DataList.Create(Elements(coll, "SortBy")
             .Select(element => (Element: element, Key: Sortable(f(element))))
@@ -123,6 +164,11 @@ public static partial class _
     /// <returns>A new list of the elements in key order.</returns>
     /// <exception cref="KeyNotFoundException">An element has no such field.</exception>
     /// <inheritdoc cref="SortBy(DataValue, Func{DataValue, DataValue})" path="/remarks"/>
+    /// <example>
+    /// <code>
+    /// _.SortBy(books, "title")   // alphabetical by title
+    /// </code>
+    /// </example>
     public static DataList SortBy(DataValue coll, string field) =>
         SortBy(coll, row => Get(row, field));
 
@@ -168,6 +214,12 @@ public static partial class _
     /// <param name="f">Computes the new value for an element.</param>
     /// <returns>A list of the results, in order.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.Map(List.Of(1, 2, 3), n => n.As&lt;long&gt;() * 2)             // [2, 4, 6]
+    /// _.Map(Map.Of(("a", 1), ("b", 2)), n => n.As&lt;long&gt;() * 2)   // [2, 4]: a map yields a list
+    /// </code>
+    /// </example>
     public static DataList Map(DataValue coll, Func<DataValue, DataValue> f) =>
         coll switch
         {
@@ -183,6 +235,11 @@ public static partial class _
     /// <param name="predicate">The test applied to each element.</param>
     /// <returns>A list of the elements that passed, in order.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.Filter(List.Of(1, 2, 3, 4), n => n.As&lt;long&gt;() > 2)   // [3, 4]
+    /// </code>
+    /// </example>
     public static DataList Filter(DataValue coll, Func<DataValue, bool> predicate) =>
         DataList.Create(Elements(coll, "Filter").Where(predicate));
 
@@ -192,6 +249,12 @@ public static partial class _
     /// <param name="obj">A map or a list.</param>
     /// <returns>The keys in insertion order, or the indices <c>0..n-1</c>.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="obj"/> is neither a map nor a list.</exception>
+    /// <example>
+    /// <code>
+    /// _.Keys(Map.Of(("a", 1), ("b", 2)))   // "a", "b"
+    /// _.Keys(List.Of("x", "y"))            // 0, 1
+    /// </code>
+    /// </example>
     public static IReadOnlyList<StringOrInt> Keys(DataValue obj) =>
         obj switch
         {
@@ -205,6 +268,12 @@ public static partial class _
     /// </summary>
     /// <param name="obj">The value to test.</param>
     /// <returns>True for a map or a list.</returns>
+    /// <example>
+    /// <code>
+    /// _.IsObject(Map.Of())    // true
+    /// _.IsObject("text")      // false
+    /// </code>
+    /// </example>
     public static bool IsObject(DataValue obj) => obj.IsComposite();
 
     /// <summary>
@@ -212,6 +281,12 @@ public static partial class _
     /// </summary>
     /// <param name="obj">The value to test.</param>
     /// <returns>True for an empty map or list. Any other value, null and scalars included, counts as empty.</returns>
+    /// <example>
+    /// <code>
+    /// _.IsEmpty(List.Of())            // true
+    /// _.IsEmpty(Map.Of(("a", 1)))     // false
+    /// </code>
+    /// </example>
     public static bool IsEmpty(DataValue obj) =>
         obj switch
         {
@@ -229,6 +304,11 @@ public static partial class _
     /// <param name="initial">The starting accumulator.</param>
     /// <returns>The final accumulator; <paramref name="initial"/> for an empty collection.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.Reduce(List.Of(1, 2, 3), (long total, DataValue n, StringOrInt index) => total + n.As&lt;long&gt;(), 0L)   // 6
+    /// </code>
+    /// </example>
     public static TAcc Reduce<TAcc>(DataValue coll, Func<TAcc, DataValue, StringOrInt, TAcc> f, TAcc initial) =>
         coll switch
         {
@@ -245,6 +325,12 @@ public static partial class _
     /// <param name="f">Computes the group key of an element.</param>
     /// <returns>A map from each key to the list of elements that produced it, in order of first appearance.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.GroupBy(List.Of("apple", "avocado", "banana"), s => s.As&lt;string&gt;()[..1])
+    /// // { a: ["apple", "avocado"], b: ["banana"] }
+    /// </code>
+    /// </example>
     public static DataMap GroupBy(DataValue coll, Func<DataValue, string> f)
     {
         var builder = DataMap.CreateBuilder();
@@ -274,6 +360,11 @@ public static partial class _
     /// <returns>A map from each field value to the list of elements that held it.</returns>
     /// <exception cref="KeyNotFoundException">An element has no such field.</exception>
     /// <exception cref="InvalidOperationException">An element's field is not a string.</exception>
+    /// <example>
+    /// <code>
+    /// _.GroupBy(rows, "isbn")   // { "1": [ ...rows with isbn "1" ], "2": [ ... ] }
+    /// </code>
+    /// </example>
     public static DataMap GroupBy(DataValue coll, string idKey) =>
         GroupBy(coll, row => Get<string>(row, idKey));
 
@@ -288,6 +379,11 @@ public static partial class _
     /// <param name="f">Computes the key of an element.</param>
     /// <returns>A map from each key to its element.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="coll"/> is neither a list nor a map.</exception>
+    /// <example>
+    /// <code>
+    /// _.KeyBy(List.Of("apple", "banana"), s => s.As&lt;string&gt;()[..1])   // { a: "apple", b: "banana" }
+    /// </code>
+    /// </example>
     public static DataMap KeyBy(DataValue coll, Func<DataValue, string> f) =>
         Elements(coll, "KeyBy")
             .Aggregate(DataMap.CreateBuilder(), (builder, element) => builder.Set(f(element), element))
@@ -302,6 +398,11 @@ public static partial class _
     /// <exception cref="KeyNotFoundException">An element has no such field.</exception>
     /// <exception cref="InvalidOperationException">An element's field is not a string.</exception>
     /// <inheritdoc cref="KeyBy(DataValue, Func{DataValue, string})" path="/remarks"/>
+    /// <example>
+    /// <code>
+    /// _.KeyBy(books, "isbn")   // { "978-1779501127": { isbn: "978-1779501127", ... }, ... }
+    /// </code>
+    /// </example>
     public static DataMap KeyBy(DataValue coll, string key) =>
         KeyBy(coll, row => Get<string>(row, key));
 
@@ -314,6 +415,13 @@ public static partial class _
     /// <see cref="NoDiff"/> when they are equivalent; otherwise <see cref="Changed"/>. For composites the change is
     /// a nested structure holding only the differing leaves, for leaves it is the new value.
     /// </returns>
+    /// <example>
+    /// <code>
+    /// _.Diff(1L, 1L)                                    // NoDiff
+    /// _.Diff(Map.Of(("a", 1)), Map.Of(("a", 2)))        // Changed({ a: 2 })
+    /// _.Diff("old", "new")                              // Changed("new")
+    /// </code>
+    /// </example>
     public static DiffResult Diff(DataValue data1, DataValue data2)
     {
         if (IsObject(data1) && IsObject(data2))
@@ -345,6 +453,13 @@ public static partial class _
     /// <param name="data1">The original value.</param>
     /// <param name="data2">The new value.</param>
     /// <returns>A map of the differences; apply it with <see cref="ApplyDiff(DataValue, DataMap)"/>.</returns>
+    /// <example>
+    /// <code>
+    /// _.DiffObjects(Map.Of(("a", 1), ("b", 2)), Map.Of(("a", 1), ("b", 3)))   // { b: 3 }
+    /// _.DiffObjects(List.Of("x", "y"), List.Of("x", "z"))                     // { "1": "z" }
+    /// _.DiffObjects(Map.Of(("a", 1)), Map.Of())                               // { a: null }
+    /// </code>
+    /// </example>
     public static DataMap DiffObjects(DataValue data1, DataValue data2)
     {
         if (ReferenceEquals(data1.Unwrap(), data2.Unwrap())) return DataMap.Empty;
@@ -384,6 +499,11 @@ public static partial class _
     /// <param name="value">The structure to walk.</param>
     /// <returns>One path per leaf. An empty map or list counts as a leaf, and a scalar yields the root path.</returns>
     /// <seealso cref="ChangedPaths"/>
+    /// <example>
+    /// <code>
+    /// _.InformationPaths(Map.Of(("a", Map.Of(("b", 1))), ("c", List.Of(2))))   // a.b, c.[0]
+    /// </code>
+    /// </example>
     public static IReadOnlyList<DataPath> InformationPaths(DataValue value) =>
         Collect(value, DataPath.Root, []);
 
@@ -399,6 +519,13 @@ public static partial class _
     /// </remarks>
     /// <param name="diff">A diff, as produced by <see cref="DiffObjects"/>.</param>
     /// <returns>The paths the diff changes; empty for an empty diff.</returns>
+    /// <example>
+    /// <code>
+    /// var diff = _.DiffObjects(Map.Of(("a", 1), ("b", 2)), Map.Of(("a", 1), ("b", 3)));
+    /// _.ChangedPaths(diff)           // b
+    /// _.ChangedPaths(Map.Of())       // none: an empty diff touches nothing
+    /// </code>
+    /// </example>
     public static IReadOnlyList<DataPath> ChangedPaths(DataMap diff) =>
         diff.IsEmpty ? [] : InformationPaths(diff);
 

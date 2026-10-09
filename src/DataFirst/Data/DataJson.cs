@@ -3,12 +3,31 @@ using System.Text.Json;
 
 namespace DataFirst;
 
+/// <summary>
 /// JSON serialisation for the generic representation.
-///
-/// System.Text.Json would serialise the union wrapper's own shape rather than the
+/// </summary>
+/// <remarks>
+/// <c>System.Text.Json</c> would serialise the union wrapper's own shape rather than the
 /// data inside it, so the union is walked explicitly.
+/// </remarks>
 public static class DataJson
 {
+    /// <summary>
+    /// Writes a value as compact JSON.
+    /// </summary>
+    /// <remarks>
+    /// Map keys keep their insertion order. Doubles are written as the shortest text
+    /// that reads back to the same number, so a whole-valued double such as 2.0 comes out as
+    /// <c>2</c>, indistinguishable from a long.
+    /// </remarks>
+    /// <param name="value">The value to write.</param>
+    /// <returns>The JSON text.</returns>
+    /// <example>
+    /// <code>
+    /// DataJson.Serialize(Map.Of(("title", "Watchmen"), ("authorIds", List.Of("alan-moore"))))
+    /// // {"title":"Watchmen","authorIds":["alan-moore"]}
+    /// </code>
+    /// </example>
     public static string Serialize(DataValue value)
     {
         var buffer = new MemoryStream();

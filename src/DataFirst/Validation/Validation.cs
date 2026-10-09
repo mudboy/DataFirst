@@ -2,34 +2,65 @@ using System.Text.RegularExpressions;
 
 namespace DataFirst;
 
+/// <summary>
 /// Validates data against a schema, where the schema is itself data.
-///
-/// This is what separates schema from representation: a schema is a DataMap that can
+/// </summary>
+/// <remarks>
+/// This is what separates schema from representation: a schema is a <see cref="DataMap"/> that can
 /// be built, stored, diffed and passed around like any other value, and this code
 /// interprets it. Nothing about a book's shape is encoded in a C# type.
-///
+/// <para>
 /// The schema language is a subset of JSON Schema:
-///
-///   type                  "null", "boolean", "integer", "number", "string",
-///                         "array", "object" -- or a list of those
-///   enum                  list of permitted values
-///   const                 a single permitted value
-///   properties            map of property name to schema
-///   required              list of property names that must be present
-///   additionalProperties  false to reject properties not named in properties
-///   items                 schema every element must match
-///   minItems, maxItems    bounds on list length
-///   uniqueItems           true to reject duplicate elements
-///   minimum, maximum      inclusive bounds on numbers
-///   minLength, maxLength  bounds on string length
-///   pattern               regular expression a string must match
-///   allOf, anyOf          lists of schemas
-///
+/// </para>
+/// <code>
+/// type                  "null", "boolean", "integer", "number", "string",
+///                       "array", "object" -- or a list of those
+/// enum                  list of permitted values
+/// const                 a single permitted value
+/// properties            map of property name to schema
+/// required              list of property names that must be present
+/// additionalProperties  false to reject properties not named in properties
+/// items                 schema every element must match
+/// minItems, maxItems    bounds on list length
+/// uniqueItems           true to reject duplicate elements
+/// minimum, maximum      inclusive bounds on numbers
+/// minLength, maxLength  bounds on string length
+/// pattern               regular expression a string must match
+/// allOf, anyOf          lists of schemas
+/// </code>
+/// <para>
 /// As in JSON Schema, a keyword that does not apply to the value's type is ignored,
-/// so minimum says nothing about a string. Every error is collected rather than
+/// so <c>minimum</c> says nothing about a string. Every error is collected rather than
 /// stopping at the first.
+/// </para>
+/// </remarks>
+/// <example>
+/// <code>
+/// var schema = Map.Of(
+///     ("type", "object"),
+///     ("required", List.Of("title")),
+///     ("properties", Map.Of(("title", Map.Of(("type", "string"), ("minLength", 1))))));
+///
+/// Validation.Validate(schema, Map.Of(("title", "Watchmen"))).IsValid()   // true
+/// Validation.Validate(schema, Map.Of(("title", ""))).Errors()
+///     // title: must be at least 1 characters, but was 0
+/// </code>
+/// </example>
 public static class Validation
 {
+    /// <summary>
+    /// Checks data against a schema, collecting every problem.
+    /// </summary>
+    /// <param name="schema">The schema, as data. A schema that is not a map is itself reported as an error.</param>
+    /// <param name="data">The value to check.</param>
+    /// <returns><see cref="Valid"/>, or <see cref="Invalid"/> holding every error with its path.</returns>
+    /// <exception cref="ArgumentException">The schema uses an unknown <c>type</c> name, or a <c>type</c> that is neither a string nor a list.</exception>
+    /// <example>
+    /// <code>
+    /// Validation.Validate(Map.Of(("minimum", 10)), 5).Errors().Single().ToString()
+    ///     // (root): must be at least 10, but was 5
+    /// </code>
+    /// </example>
     public static ValidationResult Validate(DataValue schema, DataValue data)
     {
         var errors = new List<ValidationError>();
@@ -37,8 +68,19 @@ public static class Validation
         return errors.Count == 0 ? Valid.Instance : new Invalid(errors);
     }
 
+    /// <summary>
     /// Validates, throwing when the data does not conform. For boundaries where
     /// carrying on with bad data is not an option.
+    /// </summary>
+    /// <param name="schema">The schema, as data.</param>
+    /// <param name="data">The value to check.</param>
+    /// <returns><paramref name="data"/> itself, so the call can sit in the middle of a pipeline.</returns>
+    /// <exception cref="SchemaViolationException">The data does not match; the exception carries every error.</exception>
+    /// <example>
+    /// <code>
+    /// var request = Validation.ValidateOrThrow(Schemas.SearchRequest, incoming);
+    /// </code>
+    /// </example>
     public static DataValue ValidateOrThrow(DataValue schema, DataValue data) =>
         Validate(schema, data) switch
         {

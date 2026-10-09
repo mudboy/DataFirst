@@ -9,6 +9,10 @@ namespace DataFirst.Lodash;
 /// maps (<c>At</c>, <c>Get</c>, <c>Set</c>, <c>Merge</c>, <c>Omit</c> and friends), arrays
 /// (<c>Concat</c>, <c>Uniq</c>, <c>Union</c> and friends) and collections (<c>Map</c>, <c>Filter</c>,
 /// <c>GroupBy</c>, <c>SortBy</c>, <c>Diff</c> and friends).
+/// <para>
+/// In the examples, <c>book</c> is <c>Map.Of(("title", "Watchmen"), ("isbn", "978-1779501127"))</c>,
+/// <c>library</c> is the library seed data, and <c>books</c> and <c>rows</c> are lists of maps.
+/// </para>
 /// </remarks>
 public static partial class _
 {
@@ -63,6 +67,13 @@ public static partial class _
     /// </exception>
     /// <exception cref="KeyNotFoundException">The key is not present in a map. Use <c>GetOrNull</c> to get null instead.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The index is outside a list.</exception>
+    /// <example>
+    /// <code>
+    /// _.Get(book, "title")                 // "Watchmen"
+    /// _.Get(List.Of("a", "b"), 1)          // "b"
+    /// _.Get(book, "missing")               // throws KeyNotFoundException
+    /// </code>
+    /// </example>
     public static DataValue Get(DataValue obj, StringOrInt key) =>
         (obj, key) switch
         {
@@ -85,6 +96,12 @@ public static partial class _
     /// <exception cref="InvalidOperationException">A step cannot be taken from the value it is applied to.</exception>
     /// <exception cref="KeyNotFoundException">A step names a key that is not present in a map.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A step names an index outside a list.</exception>
+    /// <example>
+    /// <code>
+    /// _.Get(library, ["catalog", "booksByIsbn", "978-1779501127", "title"])   // "Watchmen"
+    /// _.Get(library, [])                                                     // library itself
+    /// </code>
+    /// </example>
     public static DataValue Get(DataValue obj, IReadOnlyList<StringOrInt> path)
     {
         var current = obj;
@@ -98,6 +115,12 @@ public static partial class _
     /// <param name="obj">The map or list to read from.</param>
     /// <param name="key">A string key for a map, or an index for a list.</param>
     /// <returns>The value at <paramref name="key"/>, or <see cref="DataNull"/> when it is not there.</returns>
+    /// <example>
+    /// <code>
+    /// _.GetOrNull(book, "title")     // "Watchmen"
+    /// _.GetOrNull(book, "missing")   // null
+    /// </code>
+    /// </example>
     public static DataValue GetOrNull(DataValue obj, StringOrInt key) =>
         ContainsKey(obj, key) ? Get(obj, key) : DataNull.Instance;
 
@@ -107,6 +130,11 @@ public static partial class _
     /// <param name="obj">The value to start from.</param>
     /// <param name="path">The keys and indices to follow. An empty path addresses the value itself.</param>
     /// <returns>The value at the end of the path, or <see cref="DataNull"/> when the path does not exist.</returns>
+    /// <example>
+    /// <code>
+    /// _.GetOrNull(library, ["catalog", "nothing", "here"])   // null
+    /// </code>
+    /// </example>
     public static DataValue GetOrNull(DataValue obj, IReadOnlyList<StringOrInt> path)
     {
         if (path.Count == 0) return obj;
@@ -121,6 +149,12 @@ public static partial class _
     /// <param name="key">A string key for a map, or an index for a list.</param>
     /// <returns>The value at <paramref name="key"/> as a <typeparamref name="T"/>.</returns>
     /// <exception cref="InvalidOperationException">The value is not a <typeparamref name="T"/>, or the read itself fails as for <c>Get</c>.</exception>
+    /// <example>
+    /// <code>
+    /// _.Get&lt;string&gt;(book, "title")   // "Watchmen"
+    /// _.Get&lt;long&gt;(book, "title")     // throws: Expected Int64 but found string
+    /// </code>
+    /// </example>
     public static T Get<T>(DataValue obj, StringOrInt key) => Get(obj, key).As<T>();
 
     /// <summary>
@@ -131,6 +165,11 @@ public static partial class _
     /// <param name="path">The keys and indices to follow.</param>
     /// <returns>The value at the end of the path as a <typeparamref name="T"/>.</returns>
     /// <exception cref="InvalidOperationException">The value is not a <typeparamref name="T"/>, or the walk itself fails as for <c>Get</c>.</exception>
+    /// <example>
+    /// <code>
+    /// _.Get&lt;string&gt;(library, ["catalog", "booksByIsbn", "978-1779501127", "title"])   // "Watchmen"
+    /// </code>
+    /// </example>
     public static T Get<T>(DataValue obj, IReadOnlyList<StringOrInt> path) => Get(obj, path).As<T>();
 
     /// <summary>
@@ -139,6 +178,12 @@ public static partial class _
     /// <param name="obj">The value to look in. Anything other than a map or list has no keys.</param>
     /// <param name="key">A string key for a map, or an index for a list.</param>
     /// <returns>True when the key is present; false otherwise, including for a value that is neither map nor list.</returns>
+    /// <example>
+    /// <code>
+    /// _.ContainsKey(book, "title")        // true
+    /// _.ContainsKey(List.Of("a"), 1)      // false: the list has only index 0
+    /// </code>
+    /// </example>
     public static bool ContainsKey(DataValue obj, StringOrInt key) =>
         (obj, key) switch
         {
@@ -157,6 +202,12 @@ public static partial class _
     /// <param name="obj">The value to start from.</param>
     /// <param name="path">The keys and indices to follow.</param>
     /// <returns>True when the whole path exists. An empty path is never contained.</returns>
+    /// <example>
+    /// <code>
+    /// _.ContainsKey(library, ["catalog", "booksByIsbn"])   // true
+    /// _.ContainsKey(library, ["catalog", "nothing"])       // false
+    /// </code>
+    /// </example>
     public static bool ContainsKey(DataValue obj, IReadOnlyList<StringOrInt> path)
     {
         if (path.Count == 0) return false;
@@ -185,6 +236,14 @@ public static partial class _
     /// <param name="diff">The diff to apply, as produced by <c>DiffObjects</c>.</param>
     /// <returns>A new value with the diff applied; <paramref name="target"/> is not modified.</returns>
     /// <seealso cref="Merge(DataValue, DataValue)"/>
+    /// <example>
+    /// <code>
+    /// var before = Map.Of(("title", "Watchmen"), ("year", 1986));
+    /// var after = Map.Of(("title", "Watchmen"), ("year", 1987));
+    ///
+    /// _.ApplyDiff(before, _.DiffObjects(before, after))   // equals after
+    /// </code>
+    /// </example>
     public static DataValue ApplyDiff(DataValue target, DataMap diff)
     {
         var paths = ChangedPaths(diff);
@@ -211,6 +270,12 @@ public static partial class _
     /// <param name="diff">The diff to apply, as produced by <c>DiffObjects</c>.</param>
     /// <returns>A new map with the diff applied; <paramref name="target"/> is not modified.</returns>
     /// <inheritdoc cref="ApplyDiff(DataValue, DataMap)" path="/remarks"/>
+    /// <example>
+    /// <code>
+    /// var diff = _.DiffObjects(before, after);   // { year: 1987 }
+    /// _.ApplyDiff(before, diff)                   // equals after
+    /// </code>
+    /// </example>
     public static DataMap ApplyDiff(DataMap target, DataMap diff) =>
         ApplyDiff((DataValue)target, diff).As<DataMap>();
 
@@ -253,6 +318,11 @@ public static partial class _
     /// <param name="second">The map merged over it; it wins wherever the two disagree.</param>
     /// <returns>The merged map. Neither argument is modified.</returns>
     /// <inheritdoc cref="Merge(DataValue, DataValue)" path="/remarks"/>
+    /// <example>
+    /// <code>
+    /// _.Merge(Map.Of(("a", 1), ("b", 2)), Map.Of(("b", 3), ("c", 4)))   // { a: 1, b: 3, c: 4 }
+    /// </code>
+    /// </example>
     public static DataMap Merge(DataMap first, DataMap second) => MergeMaps(first, second);
 
     private static DataMap MergeMaps(DataMap first, DataMap second) =>
@@ -319,6 +389,12 @@ public static partial class _
     /// <exception cref="InvalidOperationException">
     /// <paramref name="obj"/> is neither a map nor a list, or the key's kind does not suit it.
     /// </exception>
+    /// <example>
+    /// <code>
+    /// _.Set(book, "title", "Watchmen (2nd ed.)")   // a new map with the title changed
+    /// _.Set(List.Of("a"), 2, "c")                   // ["a", null, "c"]
+    /// </code>
+    /// </example>
     public static DataValue Set(DataValue obj, StringOrInt key, DataValue value) =>
         (obj, key) switch
         {
@@ -344,6 +420,13 @@ public static partial class _
     /// <param name="value">The value to write.</param>
     /// <returns>A new structure with the value written; <paramref name="obj"/> is not modified.</returns>
     /// <exception cref="InvalidOperationException">A step cannot be taken from the value it is applied to.</exception>
+    /// <example>
+    /// <code>
+    /// _.Set(library, ["catalog", "booksByIsbn", "978-1779501127", "publicationYear"], 1986)
+    /// _.Set(Map.Of(), ["a", "b"], 1)    // { a: { b: 1 } }: missing containers are created
+    /// _.Set(Map.Of(), ["a", 0], 1)      // { a: [1] }: an index makes a list
+    /// </code>
+    /// </example>
     public static DataValue Set(DataValue obj, IReadOnlyList<StringOrInt> path, DataValue value)
     {
         if (path.Count == 0) return value;
@@ -380,6 +463,11 @@ public static partial class _
     /// <param name="value">The value to write.</param>
     /// <returns>A new map with the value written; <paramref name="map"/> is not modified.</returns>
     /// <exception cref="InvalidOperationException">The key is an index.</exception>
+    /// <example>
+    /// <code>
+    /// _.Set(Map.Of(("a", 1)), "b", 2)   // { a: 1, b: 2 }
+    /// </code>
+    /// </example>
     public static DataMap Set(DataMap map, StringOrInt key, DataValue value) =>
         Set((DataValue)map, key, value).As<DataMap>();
 
@@ -392,6 +480,11 @@ public static partial class _
     /// <returns>A new map with the value written; <paramref name="map"/> is not modified.</returns>
     /// <exception cref="InvalidOperationException">A step cannot be taken, or the path is empty and <paramref name="value"/> is not a map.</exception>
     /// <inheritdoc cref="Set(DataValue, IReadOnlyList{StringOrInt}, DataValue)" path="/remarks"/>
+    /// <example>
+    /// <code>
+    /// _.Set(Map.Of(("a", Map.Of(("b", 1)))), ["a", "b"], 2)   // { a: { b: 2 } }
+    /// </code>
+    /// </example>
     public static DataMap Set(DataMap map, IReadOnlyList<StringOrInt> path, DataValue value) =>
         Set((DataValue)map, path, value).As<DataMap>();
 
@@ -400,6 +493,11 @@ public static partial class _
     /// </summary>
     /// <param name="map">The map whose values are wanted.</param>
     /// <returns>A list of the map's values.</returns>
+    /// <example>
+    /// <code>
+    /// _.Values(Map.Of(("a", 1), ("b", 2)))   // [1, 2]
+    /// </code>
+    /// </example>
     public static DataList Values(DataMap map) => DataList.Create(map.Values);
 
     /// <summary>
@@ -412,6 +510,11 @@ public static partial class _
     /// <exception cref="KeyNotFoundException">The key is not present in a map.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The index is outside a list.</exception>
     /// <exception cref="InvalidOperationException">The key's kind does not suit <paramref name="obj"/>.</exception>
+    /// <example>
+    /// <code>
+    /// _.Update(Map.Of(("count", 1)), "count", n => n.As&lt;long&gt;() + 1)   // { count: 2 }
+    /// </code>
+    /// </example>
     public static DataValue Update(DataValue obj, StringOrInt key, Func<DataValue, DataValue> f) =>
         Set(obj, key, f(Get(obj, key)));
 
@@ -424,6 +527,11 @@ public static partial class _
     /// <returns>A new structure with the updated value; <paramref name="obj"/> is not modified.</returns>
     /// <exception cref="KeyNotFoundException">A step names a key that is not present.</exception>
     /// <exception cref="InvalidOperationException">A step cannot be taken from the value it is applied to.</exception>
+    /// <example>
+    /// <code>
+    /// _.Update(order, ["lines", 0, "quantity"], n => n.As&lt;long&gt;() + 1)
+    /// </code>
+    /// </example>
     public static DataValue Update(DataValue obj, IReadOnlyList<StringOrInt> path, Func<DataValue, DataValue> f) =>
         Set(obj, path, f(Get(obj, path)));
 
@@ -435,6 +543,11 @@ public static partial class _
     /// <param name="f">Computes the new value from the current one.</param>
     /// <returns>A new map with the updated value; <paramref name="map"/> is not modified.</returns>
     /// <exception cref="KeyNotFoundException">The key is not present.</exception>
+    /// <example>
+    /// <code>
+    /// _.Update(Map.Of(("name", "watchmen")), "name", s => s.As&lt;string&gt;().ToUpperInvariant())   // { name: "WATCHMEN" }
+    /// </code>
+    /// </example>
     public static DataMap Update(DataMap map, StringOrInt key, Func<DataValue, DataValue> f) =>
         Update((DataValue)map, key, f).As<DataMap>();
 
@@ -447,6 +560,11 @@ public static partial class _
     /// <returns>A new map with the updated value; <paramref name="map"/> is not modified.</returns>
     /// <exception cref="KeyNotFoundException">A step names a key that is not present.</exception>
     /// <exception cref="InvalidOperationException">A step cannot be taken from the value it is applied to.</exception>
+    /// <example>
+    /// <code>
+    /// _.Update(Map.Of(("a", Map.Of(("n", 1)))), ["a", "n"], n => n.As&lt;long&gt;() + 1)   // { a: { n: 2 } }
+    /// </code>
+    /// </example>
     public static DataMap Update(DataMap map, IReadOnlyList<StringOrInt> path, Func<DataValue, DataValue> f) =>
         Update((DataValue)map, path, f).As<DataMap>();
 
@@ -458,6 +576,12 @@ public static partial class _
     /// <returns>A list of maps, one per element of the list, in order.</returns>
     /// <exception cref="KeyNotFoundException">The key is not present.</exception>
     /// <exception cref="InvalidOperationException">The value at the key is not a list.</exception>
+    /// <example>
+    /// <code>
+    /// _.Unwind(Map.Of(("id", 1), ("tags", List.Of("a", "b"))), "tags")
+    /// // [ { id: 1, tags: "a" }, { id: 1, tags: "b" } ]
+    /// </code>
+    /// </example>
     public static DataList Unwind(DataMap map, string key)
     {
         var elements = Get<DataList>(map, key);
