@@ -34,7 +34,12 @@ test/
     DataValueUnionTests.cs      exhaustive switch over DataValue
     InfrastructureTests.cs      database reads and debug dumps
   DataFirst.Library.Tests/      the library domain
-    DomainTests.cs              user management, catalogue, authorisation, LibrarySystem, aggregate paths
+    DomainFixtures.cs           shared seed data for the domain tests
+    UserManagementTests.cs      user management
+    CatalogTests.cs             catalogue search and updates
+    LibraryAuthorisationTests.cs  who may read lendings and add items
+    LibrarySystemTests.cs       LibrarySystem over both stores
+    AggregatePathTests.cs       the aggregate paths
     CatalogSearchTests.cs       author names, search, request validation
     UserAccountTests.cs         roles, authentication, adding members
     BookLendingTests.cs         reading and describing lendings, authorisation
