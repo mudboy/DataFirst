@@ -12,8 +12,10 @@ public static partial class _
             _ => throw new InvalidOperationException($"Cannot Map over a {coll.Describe()}")
         };
 
-    public static DataList Filter(DataList list, Func<DataValue, bool> predicate) =>
-        DataList.Create(list.Where(predicate));
+    /// The elements of a list, or the values of a map, for which the predicate holds,
+    /// always as a list (as lodash does).
+    public static DataList Filter(DataValue coll, Func<DataValue, bool> predicate) =>
+        DataList.Create(Elements(coll, "Filter").Where(predicate));
 
     /// The keys of a map, or the indices of a list.
     public static IReadOnlyList<StringOrInt> Keys(DataValue obj) =>
