@@ -2,7 +2,7 @@ using DataFirst.Lodash;
 using FsCheck;
 using FsCheck.Fluent;
 
-namespace DataFirst.Spec;
+namespace DataFirst.Tests;
 
 /// Generators for the generic data representation.
 ///

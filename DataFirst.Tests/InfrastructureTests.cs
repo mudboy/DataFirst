@@ -7,7 +7,7 @@ using FsCheck.Xunit;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
-namespace DataFirst.Spec;
+namespace DataFirst.Tests;
 
 public sealed class PasswordTests
 {

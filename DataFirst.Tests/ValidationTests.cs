@@ -5,7 +5,7 @@ using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
-namespace DataFirst.Spec;
+namespace DataFirst.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
 public sealed class ValidationKeywordProperties

@@ -3,7 +3,7 @@ using DataFirst.Lodash;
 using FluentAssertions;
 using Xunit;
 
-namespace DataFirst;
+namespace DataFirst.Tests;
 
 public sealed class Tests
 {

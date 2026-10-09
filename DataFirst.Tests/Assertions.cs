@@ -1,6 +1,6 @@
 using FluentAssertions;
 
-namespace DataFirst.Spec;
+namespace DataFirst.Tests;
 
 public static class DataAssertions
 {
