@@ -1,3 +1,4 @@
+using DataFirst.Testing;
 using DataFirst.Library;
 using DataFirst.Lodash;
 using AwesomeAssertions;
@@ -6,7 +7,7 @@ using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Library.Tests;
 
 public static class DomainFixtures
 {

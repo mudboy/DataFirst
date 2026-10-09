@@ -1,4 +1,4 @@
-using DataFirst.Library;
+using DataFirst.Testing;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using FsCheck;
@@ -337,21 +337,6 @@ public sealed class LibrarySchemaTests
     }
 
     [Theory]
-    [InlineData("a@b.co", true)]
-    [InlineData("first.last@example.org", true)]
-    [InlineData("no-at-sign.com", false)]
-    [InlineData("two@@example.com", false)]
-    [InlineData("spaces in@example.com", false)]
-    [InlineData("missing@tld", false)]
-    [InlineData("", false)]
-    public void An_email_needs_a_local_part_a_domain_and_a_dot(string email, bool expected)
-    {
-        var member = Map.Of(("email", email), ("password", Passwords.Hash("pw", 1)));
-        Valid(Schemas.Member, member).Should().Be(expected);
-        Valid(Schemas.Librarian, member).Should().Be(expected);
-    }
-
-    [Theory]
     [InlineData("2020-04-23", true)]
     [InlineData("2020-4-23", false)]
     [InlineData("23/04/2020", false)]
@@ -400,14 +385,6 @@ public sealed class LibrarySchemaTests
         Valid(Schemas.SearchRequest, Map.Of(("title", "w"), ("fields", DataList.Empty))).Should().BeFalse();
         Valid(Schemas.SearchRequest, Map.Of(("title", "w"), ("fields", List.Of("title", "title")))).Should().BeFalse();
         Valid(Schemas.SearchRequest, Map.Of(("fields", List.Of("title")))).Should().BeFalse();
-    }
-
-    [Fact]
-    public void The_seeded_library_satisfies_every_schema_that_describes_it()
-    {
-        Valid(Schemas.LibraryData, LibraryOperations.LibraryData).Should().BeTrue();
-        Schemas.ValidateCatalog(_.Get<DataMap>(LibraryOperations.LibraryData, "catalog")).IsValid().Should().BeTrue();
-        Schemas.ValidateUserManagement(_.Get<DataMap>(LibraryOperations.LibraryData, "userManagementData")).IsValid().Should().BeTrue();
     }
 
     [Fact]

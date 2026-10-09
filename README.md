@@ -20,7 +20,9 @@ src/
     LibraryOperations.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs
                           users, books, lending and the aggregate boundaries
 test/
-  DataFirst.Tests/        xUnit tests; FsCheck property tests alongside example tests
+  DataFirst.Tests/          xUnit tests for the core and database; FsCheck property tests alongside example tests
+  DataFirst.Library.Tests/  tests for the library domain
+  DataFirst.Testing/        shared test support: generators and assertions
 ```
 
 ## Namespaces
@@ -29,7 +31,8 @@ test/
 - `DataFirst.Database`: SQLite access.
 - `DataFirst.Library`: the library domain.
 - `DataFirst.Lodash`: the generic data functions.
-- `DataFirst.Tests`: all test code.
+- `DataFirst.Tests`, `DataFirst.Library.Tests`: test code.
+- `DataFirst.Testing`: shared generators and assertions for the tests.
 
 ## Build and test
 

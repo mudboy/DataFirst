@@ -1,5 +1,5 @@
+using DataFirst.Testing;
 using System.Collections.Immutable;
-using DataFirst.Library;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using FsCheck;
@@ -24,7 +24,10 @@ public sealed record Step(int Lag, string Key);
 
 public static class StoreHarness
 {
-    public static readonly DataPath Aggregate = Aggregates.Book("b1");
+    /// A path into the harness data; stores treat it as an opaque aggregate boundary.
+    public static DataPath Book(string isbn) => DataPath.Of("catalog", "booksByIsbn", isbn);
+
+    public static readonly DataPath Aggregate = Book("b1");
 
     public static readonly DataMap Initial = Map.Of(
         ("catalog", Map.Of(("booksByIsbn", Map.Of(
@@ -194,7 +197,7 @@ public sealed class StoreContractTests
     public void A_missing_aggregate_reads_as_null_at_version_zero_and_can_be_created(string kind)
     {
         var store = StoreHarness.Make(kind);
-        var absent = Aggregates.Book("nope");
+        var absent = StoreHarness.Book("nope");
 
         var read = store.Read(absent);
         read.Version.Should().Be(0);
@@ -210,14 +213,14 @@ public sealed class StoreContractTests
     public void The_whole_system_can_be_read_as_the_root_aggregate(string kind)
     {
         var store = StoreHarness.Make(kind);
-        store.Read(Aggregates.Everything).Value.Equals((DataValue)StoreHarness.Initial).Should().BeTrue();
+        store.Read(DataPath.Root).Value.Equals((DataValue)StoreHarness.Initial).Should().BeTrue();
     }
 
     [Theory, MemberData(nameof(Kinds))]
     public void Writing_one_aggregate_leaves_its_neighbours_and_their_versions_alone(string kind)
     {
         var store = StoreHarness.Make(kind);
-        var neighbour = Aggregates.Book("b2");
+        var neighbour = StoreHarness.Book("b2");
         var neighbourBefore = store.Read(neighbour);
         var start = store.Read(StoreHarness.Aggregate);
 
@@ -328,13 +331,13 @@ public sealed class DiffIndexedStoreRetentionTests
     public void Retention_is_per_aggregate()
     {
         var store = new DiffIndexedStore(StoreHarness.Initial, 1);
-        var b2Start = store.Read(Aggregates.Book("b2"));
+        var b2Start = store.Read(StoreHarness.Book("b2"));
 
         var b1 = store.Read(StoreHarness.Aggregate);
         for (var i = 1; i <= 4; i++)
             b1 = store.Commit(StoreHarness.Aggregate, b1.Version, _.DiffObjects(b1.Value, _.Set(b1.Value, "a", i)));
 
-        var act = () => store.Commit(Aggregates.Book("b2"), b2Start.Version,
+        var act = () => store.Commit(StoreHarness.Book("b2"), b2Start.Version,
             _.DiffObjects(b2Start.Value, _.Set(b2Start.Value, "a", 7)));
         act.Should().NotThrow();
     }

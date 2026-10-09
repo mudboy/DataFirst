@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Testing;
 
 public static class DataAssertions
 {
