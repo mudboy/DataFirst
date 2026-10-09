@@ -6,10 +6,12 @@ public static partial class _
     ///
     /// Walks the diff's information paths rather than merging structurally, so every
     /// location the diff records is written exactly as recorded -- including one
-    /// genuinely changed to null.
+    /// genuinely changed to null. An empty diff records nothing, so the target comes
+    /// back unchanged (InformationPaths would report the diff's own root, and writing
+    /// that would replace the target with {}).
     public static DataValue Merge(DataValue target, DataMap diff)
     {
-        var paths = InformationPaths(diff);
+        var paths = ChangedPaths(diff);
         return paths.Aggregate(Seed(target, paths), (acc, path) => Set(acc, path, Get(diff, path)));
     }
 

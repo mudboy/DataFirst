@@ -43,7 +43,7 @@ public static class Passwords
 
             return CryptographicOperations.FixedTimeEquals(Derive(password, salt, iterations), expected);
         }
-        catch (Exception e) when (e is FormatException or KeyNotFoundException or InvalidOperationException)
+        catch (Exception e) when (e is FormatException or KeyNotFoundException or InvalidOperationException or ArgumentException)
         {
             // A malformed credential record is a failed login, not a crash.
             return false;
