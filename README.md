@@ -11,13 +11,13 @@ src/
   DataFirst/              the generic core
     Data/                 DataValue, DataMap, DataList, DataPath: the immutable data representation
     Lodash/               generic functions over data: At, Get, Set, Update, Merge, Diff, GroupBy, KeyBy, Unwind, ...
-    Validation/           schemas and validation results
+    Validation/           the schema validator and its results
     Store/                aggregate stores (snapshot and diff-indexed) behind IAggregateStore
     SystemState.cs, SystemConsistency.cs
                           the versioned state and how concurrent changes are reconciled
   DataFirst.Database/     SQLite access: Db.cs reads results into data, With.cs is a throwaway test database
   DataFirst.Library/      the library domain, built on the core
-    LibraryOperations.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs
+    LibraryOperations.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs, Schemas.cs
                           users, books, lending and the aggregate boundaries
 test/
   DataFirst.Tests/          xUnit tests for the core and database; FsCheck property tests alongside example tests

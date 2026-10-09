@@ -1,6 +1,6 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// The shapes the library expects, expressed as data.
 ///
