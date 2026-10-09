@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// Password hashing, stored as generic data like everything else.
 ///

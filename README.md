@@ -17,7 +17,7 @@ src/
                           the versioned state and how concurrent changes are reconciled
   DataFirst.Database/     SQLite access: Db.cs reads results into data, With.cs is a throwaway test database
   DataFirst.Library/      the library domain, built on the core
-    Library.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs
+    LibraryOperations.cs, LibrarySystem.cs, Catalog.cs, UserManagement.cs, Aggregates.cs, Passwords.cs
                           users, books, lending and the aggregate boundaries
 test/
   DataFirst.Tests/        xUnit tests; FsCheck property tests alongside example tests
@@ -25,7 +25,8 @@ test/
 
 ## Namespaces
 
-- `DataFirst`: the data types, stores and the library domain (both `DataFirst` and `DataFirst.Library` projects share it).
+- `DataFirst`: the data types, stores and system state, plus the database code in `DataFirst.Database`.
+- `DataFirst.Library`: the library domain.
 - `DataFirst.Lodash`: the generic data functions.
 - `DataFirst.Tests`: all test code.
 

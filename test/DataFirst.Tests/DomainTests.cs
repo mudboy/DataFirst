@@ -1,3 +1,4 @@
+using DataFirst.Library;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using FsCheck;
@@ -213,7 +214,7 @@ public sealed class CatalogTests
 {
     private static readonly DataMap Catalog = DomainFixtures.Catalog;
 
-    private static DataList Search(DataMap query) => DataFirst.Catalog.SearchBook(Catalog, query);
+    private static DataList Search(DataMap query) => DataFirst.Library.Catalog.SearchBook(Catalog, query);
 
     // Generated catalogues: years, titles and author sets vary, ids are fixed.
 
@@ -247,7 +248,7 @@ public sealed class CatalogTests
     [Property]
     public Property An_empty_query_matches_every_book_in_order() =>
         Prop.ForAll(RandomCatalog.ToArbitrary(), catalog =>
-            DataFirst.Catalog.SearchBook(catalog, DataMap.Empty).Select(r => _.Get<string>(r, "isbn"))
+            DataFirst.Library.Catalog.SearchBook(catalog, DataMap.Empty).Select(r => _.Get<string>(r, "isbn"))
                 .SequenceEqual(Books(catalog).Select(b => _.Get<string>(b, "isbn"))));
 
     [Property]
@@ -262,7 +263,7 @@ public sealed class CatalogTests
                                 && _.Get<long>(b, "publicationYear") <= t.b)
                     .Select(b => _.Get<string>(b, "isbn"));
 
-                var actual = DataFirst.Catalog.SearchBook(t.catalog, Map.Of(("publishedAfter", t.a), ("publishedBefore", t.b)))
+                var actual = DataFirst.Library.Catalog.SearchBook(t.catalog, Map.Of(("publishedAfter", t.a), ("publishedBefore", t.b)))
                     .Select(r => _.Get<string>(r, "isbn"));
 
                 return actual.SequenceEqual(expected);
@@ -277,10 +278,10 @@ public sealed class CatalogTests
             t =>
             {
                 var expected = Books(t.catalog).Where(b => _.Get<string>(b, "title").Contains(t.needle, StringComparison.OrdinalIgnoreCase));
-                var actual = DataFirst.Catalog.SearchBook(t.catalog, Map.Of(("title", t.needle)));
+                var actual = DataFirst.Library.Catalog.SearchBook(t.catalog, Map.Of(("title", t.needle)));
 
                 return actual.Select(r => _.Get<string>(r, "isbn")).SequenceEqual(expected.Select(b => _.Get<string>(b, "isbn")))
-                       && DataFirst.Catalog.SearchBooksByTitle(t.catalog, t.needle).Equals(actual);
+                       && DataFirst.Library.Catalog.SearchBooksByTitle(t.catalog, t.needle).Equals(actual);
             });
 
     [Property]
@@ -289,9 +290,9 @@ public sealed class CatalogTests
             (from catalog in RandomCatalog from a in Gen.Choose(1400, 2100) select (catalog, a)).ToArbitrary(),
             t =>
             {
-                var both = DataFirst.Catalog.SearchBook(t.catalog, Map.Of(("title", "watch"), ("publishedAfter", t.a)));
-                var byTitle = DataFirst.Catalog.SearchBook(t.catalog, Map.Of(("title", "watch")));
-                var byYear = DataFirst.Catalog.SearchBook(t.catalog, Map.Of(("publishedAfter", t.a)));
+                var both = DataFirst.Library.Catalog.SearchBook(t.catalog, Map.Of(("title", "watch"), ("publishedAfter", t.a)));
+                var byTitle = DataFirst.Library.Catalog.SearchBook(t.catalog, Map.Of(("title", "watch")));
+                var byYear = DataFirst.Library.Catalog.SearchBook(t.catalog, Map.Of(("publishedAfter", t.a)));
 
                 return both.All(r => byTitle.Contains(r) && byYear.Contains(r))
                        && both.Count == byTitle.Count(r => byYear.Contains(r));
@@ -300,7 +301,7 @@ public sealed class CatalogTests
     [Property]
     public Property Results_describe_each_book_by_title_isbn_and_resolved_author_names() =>
         Prop.ForAll(RandomCatalog.ToArbitrary(), catalog =>
-            DataFirst.Catalog.SearchBook(catalog, DataMap.Empty).All(r =>
+            DataFirst.Library.Catalog.SearchBook(catalog, DataMap.Empty).All(r =>
             {
                 var info = r.As<DataMap>();
                 var names = _.Get<DataList>(info, "authorNames").Select(n => n.As<string>()).ToList();
@@ -347,15 +348,15 @@ public sealed class CatalogTests
     public void A_book_naming_an_unknown_author_cannot_be_described()
     {
         var broken = _.Set(Catalog, ["booksByIsbn", "978-0000000001", "authorIds"], List.Of("ghost"));
-        new Action(() => DataFirst.Catalog.SearchBook(broken, DataMap.Empty)).Should().Throw<KeyNotFoundException>();
+        new Action(() => DataFirst.Library.Catalog.SearchBook(broken, DataMap.Empty)).Should().Throw<KeyNotFoundException>();
     }
 
     [Fact]
     public void An_empty_catalogue_has_nothing_to_find()
     {
         var empty = Map.Of(("booksByIsbn", DataMap.Empty), ("authorsById", DataMap.Empty));
-        DataFirst.Catalog.SearchBook(empty, DataMap.Empty).Should().BeEmpty();
-        DataFirst.Catalog.SearchBooksByTitle(empty, "x").Should().BeEmpty();
+        DataFirst.Library.Catalog.SearchBook(empty, DataMap.Empty).Should().BeEmpty();
+        DataFirst.Library.Catalog.SearchBooksByTitle(empty, "x").Should().BeEmpty();
     }
 
     // Lendings
@@ -365,7 +366,7 @@ public sealed class CatalogTests
     {
         var lendings = UserManagement.BookLendings(DomainFixtures.Users, "lent@x.co");
 
-        var described = DataFirst.Catalog.GetBookLendings(Catalog, lendings);
+        var described = DataFirst.Library.Catalog.GetBookLendings(Catalog, lendings);
 
         described.ShouldEqual(List.Of(
             Map.Of(("bookItemId", "item-1"), ("lendingDate", "2021-01-02"), ("title", "Watchmen"),
@@ -377,8 +378,8 @@ public sealed class CatalogTests
     [Fact]
     public void No_lendings_describe_to_nothing_and_an_unknown_book_is_an_error()
     {
-        DataFirst.Catalog.GetBookLendings(Catalog, DataList.Empty).Should().BeEmpty();
-        new Action(() => DataFirst.Catalog.GetBookLendings(Catalog, List.Of(
+        DataFirst.Library.Catalog.GetBookLendings(Catalog, DataList.Empty).Should().BeEmpty();
+        new Action(() => DataFirst.Library.Catalog.GetBookLendings(Catalog, List.Of(
                 Map.Of(("bookItemId", "i"), ("bookIsbn", "978-9999999999"), ("lendingDate", "2020-01-01")))))
             .Should().Throw<KeyNotFoundException>().WithMessage("*978-9999999999*");
     }
@@ -395,7 +396,7 @@ public sealed class CatalogTests
             var book = _.Get<DataMap>(Catalog, ["booksByIsbn", "978-0000000001"]);
             var before = book.ToString();
 
-            var updated = DataFirst.Catalog.AddItemToBook(book, Map.Of(("isbn", "978-0000000001"), ("id", id), ("libId", "lib-1")));
+            var updated = DataFirst.Library.Catalog.AddItemToBook(book, Map.Of(("isbn", "978-0000000001"), ("id", id), ("libId", "lib-1")));
             var items = _.Get<DataList>(updated, "bookItems");
 
             return items.Count == 1
@@ -408,19 +409,19 @@ public sealed class CatalogTests
     public void Items_accumulate_and_a_repeated_id_is_refused()
     {
         var book = _.Get<DataMap>(Catalog, ["booksByIsbn", "978-0000000001"]);
-        var withOne = DataFirst.Catalog.AddItemToBook(book, WatchmenIsbnInfo);
-        var withTwo = DataFirst.Catalog.AddItemToBook(withOne, WatchmenIsbnInfo.SetItem("id", "second"));
+        var withOne = DataFirst.Library.Catalog.AddItemToBook(book, WatchmenIsbnInfo);
+        var withTwo = DataFirst.Library.Catalog.AddItemToBook(withOne, WatchmenIsbnInfo.SetItem("id", "second"));
 
         _.Get<DataList>(withTwo, "bookItems").Select(i => _.Get<string>(i, "id")).Should().Equal("new-item", "second");
-        new Action(() => DataFirst.Catalog.AddItemToBook(withTwo, WatchmenIsbnInfo))
+        new Action(() => DataFirst.Library.Catalog.AddItemToBook(withTwo, WatchmenIsbnInfo))
             .Should().Throw<DuplicateBookItemException>().WithMessage("*new-item*");
     }
 
     [Fact]
     public void The_same_item_id_may_exist_on_different_books()
     {
-        var once = DataFirst.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo);
-        var twice = DataFirst.Catalog.AddBookItem(once, WatchmenIsbnInfo.SetItem("isbn", "978-0000000002"));
+        var once = DataFirst.Library.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo);
+        var twice = DataFirst.Library.Catalog.AddBookItem(once, WatchmenIsbnInfo.SetItem("isbn", "978-0000000002"));
 
         _.Get<DataList>(twice, ["booksByIsbn", "978-0000000002", "bookItems"]).Should().HaveCount(1);
     }
@@ -428,7 +429,7 @@ public sealed class CatalogTests
     [Fact]
     public void Adding_to_the_catalogue_touches_only_the_named_book()
     {
-        var updated = DataFirst.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo);
+        var updated = DataFirst.Library.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo);
 
         _.DiffObjects(Catalog, updated).ChangedPathsAre(
             "booksByIsbn.978-0000000001.bookItems.[0].id",
@@ -439,11 +440,11 @@ public sealed class CatalogTests
     [Fact]
     public void Adding_an_item_to_an_unknown_book_or_with_a_bad_shape_is_refused()
     {
-        new Action(() => DataFirst.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo.SetItem("isbn", "978-9999999999")))
+        new Action(() => DataFirst.Library.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo.SetItem("isbn", "978-9999999999")))
             .Should().Throw<KeyNotFoundException>();
-        new Action(() => DataFirst.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo.SetItem("isLent", true)))
+        new Action(() => DataFirst.Library.Catalog.AddBookItem(Catalog, WatchmenIsbnInfo.SetItem("isLent", true)))
             .Should().Throw<SchemaViolationException>();
-        new Action(() => DataFirst.Catalog.AddItemToBook(DataMap.Empty, Map.Of(("id", "i"))))
+        new Action(() => DataFirst.Library.Catalog.AddItemToBook(DataMap.Empty, Map.Of(("id", "i"))))
             .Should().Throw<SchemaViolationException>();
     }
 
@@ -469,7 +470,7 @@ public sealed class LibraryAuthorisationTests
     [InlineData("nobody@x.co", false)]
     public void Only_librarians_and_super_members_read_lendings(string user, bool allowed)
     {
-        var read = () => DataFirst.Library.GetBookLendings(Library, user, "lent@x.co");
+        var read = () => LibraryOperations.GetBookLendings(Library, user, "lent@x.co");
 
         if (allowed) read().Should().HaveCount(2);
         else read.Should().Throw<Exception>().WithMessage("Not allowed*");
@@ -483,7 +484,7 @@ public sealed class LibraryAuthorisationTests
     [InlineData("nobody@x.co", false)]
     public void Only_librarians_and_vip_members_add_items(string user, bool allowed)
     {
-        var add = () => DataFirst.Library.AddBookItem(Library, user, Info);
+        var add = () => LibraryOperations.AddBookItem(Library, user, Info);
 
         if (allowed)
             _.Get<DataList>(add(), ["catalog", "booksByIsbn", "978-0000000001", "bookItems"]).Should().HaveCount(1);
@@ -494,7 +495,7 @@ public sealed class LibraryAuthorisationTests
     [Fact]
     public void Adding_an_item_returns_the_whole_library_with_the_rest_untouched()
     {
-        var updated = DataFirst.Library.AddBookItem(Library, "lib@x.co", Info);
+        var updated = LibraryOperations.AddBookItem(Library, "lib@x.co", Info);
 
         _.Get<DataMap>(updated, "userManagementData").Equals(DomainFixtures.Users).Should().BeTrue();
         _.Get<DataMap>(updated, ["catalog", "authorsById"]).Equals(_.Get<DataMap>(DomainFixtures.Catalog, "authorsById")).Should().BeTrue();
@@ -503,29 +504,29 @@ public sealed class LibraryAuthorisationTests
     [Fact]
     public void Searches_run_over_the_catalogue_and_serialise_to_json()
     {
-        DataFirst.Library.SearchBook(Library, Map.Of(("title", "watch"))).Should().HaveCount(1);
-        DataFirst.Library.SearchBooksByTitleJson(Library, "dark")
+        LibraryOperations.SearchBook(Library, Map.Of(("title", "watch"))).Should().HaveCount(1);
+        LibraryOperations.SearchBooksByTitleJson(Library, "dark")
             .Should().Be("""[{"title":"The Dark Knight Returns","isbn":"978-0000000002","authorNames":["Frank Miller"]}]""");
-        DataFirst.Library.SearchBooksByTitleJson(Library, "zzz").Should().Be("[]");
+        LibraryOperations.SearchBooksByTitleJson(Library, "zzz").Should().Be("[]");
     }
 
     [Fact]
     public void A_search_request_can_project_fields_in_the_order_asked()
     {
-        DataFirst.Library.SearchBooksJson(Library, Map.Of(("title", "watch"), ("fields", List.Of("isbn", "title"))))
+        LibraryOperations.SearchBooksJson(Library, Map.Of(("title", "watch"), ("fields", List.Of("isbn", "title"))))
             .Should().Be("""[{"isbn":"978-0000000001","title":"Watchmen"}]""");
-        DataFirst.Library.SearchBooksJson(Library, Map.Of(("title", "watch"), ("fields", List.Of("authorNames"))))
+        LibraryOperations.SearchBooksJson(Library, Map.Of(("title", "watch"), ("fields", List.Of("authorNames"))))
             .Should().Be("""[{"authorNames":["Alan Moore","Dave Gibbons"]}]""");
-        DataFirst.Library.SearchBooksJson(Library, Map.Of(("title", "watch")))
+        LibraryOperations.SearchBooksJson(Library, Map.Of(("title", "watch")))
             .Should().Contain("\"title\":\"Watchmen\"").And.Contain("\"authorNames\"");
     }
 
     [Fact]
     public void A_malformed_search_request_never_reaches_the_catalogue()
     {
-        new Action(() => DataFirst.Library.SearchBooksJson(Library, Map.Of(("fields", List.Of("title")))))
+        new Action(() => LibraryOperations.SearchBooksJson(Library, Map.Of(("fields", List.Of("title")))))
             .Should().Throw<SchemaViolationException>();
-        new Action(() => DataFirst.Library.SearchBooksJson(Library, Map.Of(("title", "w"), ("fields", List.Of("password")))))
+        new Action(() => LibraryOperations.SearchBooksJson(Library, Map.Of(("title", "w"), ("fields", List.Of("password")))))
             .Should().Throw<SchemaViolationException>();
     }
 }
@@ -712,6 +713,6 @@ public sealed class AggregatePathTests
                      Aggregates.Book("978-1779501127"), Aggregates.Author("alan-moore"),
                      Aggregates.Member("samantha@gmail.com"), Aggregates.Members, Aggregates.UserManagement
                  })
-            _.ContainsKey(Library.LibraryData, path).Should().BeTrue(path.ToString());
+            _.ContainsKey(LibraryOperations.LibraryData, path).Should().BeTrue(path.ToString());
     }
 }

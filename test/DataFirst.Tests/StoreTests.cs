@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using DataFirst.Library;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using FsCheck;

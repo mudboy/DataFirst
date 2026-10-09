@@ -1,6 +1,6 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// The system layer: the only place that talks to the store.
 ///
@@ -23,13 +23,13 @@ public sealed class LibrarySystem(IAggregateStore store)
 
     // Reads.
 
-    public DataList SearchBook(DataMap searchQuery) => Library.SearchBook(Snapshot(), searchQuery);
+    public DataList SearchBook(DataMap searchQuery) => LibraryOperations.SearchBook(Snapshot(), searchQuery);
 
     public string SearchBooksByTitleJson(string query) =>
-        Library.SearchBooksByTitleJson(Snapshot(), query);
+        LibraryOperations.SearchBooksByTitleJson(Snapshot(), query);
 
     public DataList GetBookLendings(string userId, string memberId) =>
-        Library.GetBookLendings(Snapshot(), userId, memberId);
+        LibraryOperations.GetBookLendings(Snapshot(), userId, memberId);
 
     // Writes: read one aggregate, compute over it, send back the difference.
 

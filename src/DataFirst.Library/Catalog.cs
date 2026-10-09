@@ -1,6 +1,6 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// Raised when a book item id is already in use on the book it is being added to.
 public sealed class DuplicateBookItemException(string bookItemId)

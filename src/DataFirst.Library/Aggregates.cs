@@ -1,4 +1,4 @@
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// The units of atomic change.
 ///

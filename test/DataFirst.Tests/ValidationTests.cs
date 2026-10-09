@@ -1,3 +1,4 @@
+using DataFirst.Library;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using FsCheck;
@@ -404,9 +405,9 @@ public sealed class LibrarySchemaTests
     [Fact]
     public void The_seeded_library_satisfies_every_schema_that_describes_it()
     {
-        Valid(Schemas.LibraryData, Library.LibraryData).Should().BeTrue();
-        Schemas.ValidateCatalog(_.Get<DataMap>(Library.LibraryData, "catalog")).IsValid().Should().BeTrue();
-        Schemas.ValidateUserManagement(_.Get<DataMap>(Library.LibraryData, "userManagementData")).IsValid().Should().BeTrue();
+        Valid(Schemas.LibraryData, LibraryOperations.LibraryData).Should().BeTrue();
+        Schemas.ValidateCatalog(_.Get<DataMap>(LibraryOperations.LibraryData, "catalog")).IsValid().Should().BeTrue();
+        Schemas.ValidateUserManagement(_.Get<DataMap>(LibraryOperations.LibraryData, "userManagementData")).IsValid().Should().BeTrue();
     }
 
     [Fact]

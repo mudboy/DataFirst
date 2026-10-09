@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using DataFirst.Library;
 using DataFirst.Lodash;
 using AwesomeAssertions;
 using Xunit;
@@ -216,8 +217,8 @@ public sealed class Tests
     [Fact]
     public void Should_Get_AuthorNames()
     {
-        var catalogData = _.Get<DataMap>(Library.LibraryData, "catalog");
-        var book = _.Get<DataMap>(Library.LibraryData, ["catalog", "booksByIsbn", "978-1779501127"]);
+        var catalogData = _.Get<DataMap>(LibraryOperations.LibraryData, "catalog");
+        var book = _.Get<DataMap>(LibraryOperations.LibraryData, ["catalog", "booksByIsbn", "978-1779501127"]);
         
         var names = Catalog.AuthorNames(catalogData, book);
 
@@ -227,7 +228,7 @@ public sealed class Tests
     [Fact]
     public void Should_Search_Books_By_Title()
     {   
-        var catalogData = _.Get<DataMap>(Library.LibraryData, "catalog");
+        var catalogData = _.Get<DataMap>(LibraryOperations.LibraryData, "catalog");
 
         var result = Catalog.SearchBooksByTitle(catalogData, "Wat");
 
@@ -240,7 +241,7 @@ public sealed class Tests
     [Fact]
     public void Should_Search_Library_Books_By_Title_Json()
     {
-        var result = Library.SearchBooksByTitleJson(Library.LibraryData, "Watchmen");
+        var result = LibraryOperations.SearchBooksByTitleJson(LibraryOperations.LibraryData, "Watchmen");
 
         result.Should().Be(
             """[{"title":"Watchmen","isbn":"978-1779501127","authorNames":["Alan Moore","Dave Gibbons"]}]""");
@@ -326,7 +327,7 @@ public sealed class Tests
     [Fact]
     public void Should_Not_Modify_Original_With_Set()
     {
-        var oldData = Library.LibraryData;
+        var oldData = LibraryOperations.LibraryData;
         var newData = _.Set(oldData, 
             ["catalog", "booksByIsbn", "978-1779501127", "publicationYear"], 1986);
 
@@ -627,10 +628,10 @@ public sealed class Tests
     [Fact]
     public void Should_Accept_The_Real_Library_Data()
     {
-        Validation.Validate(Schemas.LibraryData, Library.LibraryData).Errors()
+        Validation.Validate(Schemas.LibraryData, LibraryOperations.LibraryData).Errors()
             .Should().BeEmpty();
 
-        Schemas.ValidateCatalog(_.Get<DataMap>(Library.LibraryData, "catalog")).Errors()
+        Schemas.ValidateCatalog(_.Get<DataMap>(LibraryOperations.LibraryData, "catalog")).Errors()
             .Should().BeEmpty();
     }
 
@@ -744,7 +745,7 @@ public sealed class Tests
     {
         var request = Map.Of(("title", "Watchmen"), ("fields", List.Of("title", "isbn")));
 
-        Library.SearchBooksJson(Library.LibraryData, request)
+        LibraryOperations.SearchBooksJson(LibraryOperations.LibraryData, request)
             .Should().Be("""[{"title":"Watchmen","isbn":"978-1779501127"}]""");
     }
 
@@ -753,7 +754,7 @@ public sealed class Tests
     {
         var badRequest = Map.Of(("title", ""), ("fields", List.Of("title", "publisher")));
 
-        var search = () => Library.SearchBooksJson(Library.LibraryData, badRequest);
+        var search = () => LibraryOperations.SearchBooksJson(LibraryOperations.LibraryData, badRequest);
 
         search.Should().Throw<SchemaViolationException>()
             .Which.Errors.Select(e => e.ToString()).Should().BeEquivalentTo(
@@ -781,7 +782,7 @@ public sealed class Tests
             Map.Of(("properties", Map.Of(("title", Map.Of(("minLength", 5)))))));
     }
 
-    private static DataMap Users => _.Get<DataMap>(Library.LibraryData, "userManagementData");
+    private static DataMap Users => _.Get<DataMap>(LibraryOperations.LibraryData, "userManagementData");
 
     [Fact]
     public void Should_Identify_Roles()
@@ -933,14 +934,14 @@ public sealed class Tests
     public void Should_Refuse_Library_Operations_To_Unauthorised_Users()
     {
         // vip@gmail.com is neither a librarian nor a super member.
-        var getLendings = () => Library.GetBookLendings(Library.LibraryData, "vip@gmail.com", "samantha@gmail.com");
+        var getLendings = () => LibraryOperations.GetBookLendings(LibraryOperations.LibraryData, "vip@gmail.com", "samantha@gmail.com");
         getLendings.Should().Throw<Exception>().WithMessage("Not allowed to get book lendings");
 
         // samantha is a super member, but not a VIP.
-        var addItem = () => Library.AddBookItem(Library.LibraryData, "samantha@gmail.com", Map.Of());
+        var addItem = () => LibraryOperations.AddBookItem(LibraryOperations.LibraryData, "samantha@gmail.com", Map.Of());
         addItem.Should().Throw<Exception>().WithMessage("Not allowed to add book items");
 
-        var unknownUser = () => Library.AddBookItem(Library.LibraryData, "nobody@gmail.com", Map.Of());
+        var unknownUser = () => LibraryOperations.AddBookItem(LibraryOperations.LibraryData, "nobody@gmail.com", Map.Of());
         unknownUser.Should().Throw<Exception>().WithMessage("Not allowed to add book items");
     }
 
@@ -1014,7 +1015,7 @@ public sealed class Tests
     public void Should_Describe_A_Members_Lendings()
     {
         var lendings = UserManagement.BookLendings(Users, "samantha@gmail.com");
-        var catalog = _.Get<DataMap>(Library.LibraryData, "catalog");
+        var catalog = _.Get<DataMap>(LibraryOperations.LibraryData, "catalog");
 
         ShouldEqual(
             Catalog.GetBookLendings(catalog, lendings),
@@ -1066,7 +1067,7 @@ public sealed class Tests
     [Fact]
     public void Should_Reject_A_Duplicate_Book_Item()
     {
-        var catalog = _.Get<DataMap>(Library.LibraryData, "catalog");
+        var catalog = _.Get<DataMap>(LibraryOperations.LibraryData, "catalog");
         var taken = Map.Of(("isbn", "978-1779501127"), ("id", "book-item-1"), ("libId", "nyc-central-lib"));
 
         var add = () => Catalog.AddBookItem(catalog, taken);
@@ -1086,15 +1087,15 @@ public sealed class Tests
     public void Should_Get_Lendings_End_To_End()
     {
         // A librarian may read another member's lendings.
-        TitlesOf(Library.GetBookLendings(Library.LibraryData, "franck@gmail.com", "samantha@gmail.com"))
+        TitlesOf(LibraryOperations.GetBookLendings(LibraryOperations.LibraryData, "franck@gmail.com", "samantha@gmail.com"))
             .Should().Equal("Watchmen");
 
         // So may a super member.
-        TitlesOf(Library.GetBookLendings(Library.LibraryData, "samantha@gmail.com", "samantha@gmail.com"))
+        TitlesOf(LibraryOperations.GetBookLendings(LibraryOperations.LibraryData, "samantha@gmail.com", "samantha@gmail.com"))
             .Should().Equal("Watchmen");
 
         // A member with no lendings gets an empty list.
-        Library.GetBookLendings(Library.LibraryData, "franck@gmail.com", "vip@gmail.com")
+        LibraryOperations.GetBookLendings(LibraryOperations.LibraryData, "franck@gmail.com", "vip@gmail.com")
             .Should().BeEmpty();
     }
 
@@ -1103,7 +1104,7 @@ public sealed class Tests
     {
         var info = Map.Of(("isbn", "978-1779501127"), ("id", "book-item-3"), ("libId", "brooklyn-lib"));
 
-        var updated = Library.AddBookItem(Library.LibraryData, "vip@gmail.com", info);
+        var updated = LibraryOperations.AddBookItem(LibraryOperations.LibraryData, "vip@gmail.com", info);
 
         var items = _.Get<DataList>(updated, ["catalog", "booksByIsbn", "978-1779501127", "bookItems"]);
         items.Select(i => _.Get<string>(i, "id"))
@@ -1115,14 +1116,14 @@ public sealed class Tests
 
         // The only difference is the new item.
         ShouldEqual(
-            _.DiffObjects(Library.LibraryData, updated),
+            _.DiffObjects(LibraryOperations.LibraryData, updated),
             Map.Of(("catalog", Map.Of(("booksByIsbn", Map.Of(("978-1779501127", Map.Of(
                 ("bookItems", Map.Of(("2", Map.Of(
                     ("id", "book-item-3"), ("libId", "brooklyn-lib"), ("isLent", false)))))))))))));
     }
 
     private static DataMap TwoBookLibrary => _.Set(
-        Library.LibraryData,
+        LibraryOperations.LibraryData,
         ["catalog", "booksByIsbn", "978-1982137274"],
         Map.Of(
             ("isbn", "978-1982137274"),
@@ -1154,7 +1155,7 @@ public sealed class Tests
     [Fact]
     public void Should_Merge_Disjoint_Changes_Within_One_Aggregate()
     {
-        var state = new SystemState(Library.LibraryData);
+        var state = new SystemState(LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
         var start = _.Get(state.Get(), book);
 
@@ -1169,7 +1170,7 @@ public sealed class Tests
     [Fact]
     public void Should_Still_Conflict_Within_One_Aggregate()
     {
-        var state = new SystemState(Library.LibraryData);
+        var state = new SystemState(LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
         var start = _.Get(state.Get(), book);
 
@@ -1184,7 +1185,7 @@ public sealed class Tests
     [Fact]
     public void Should_Commit_An_Aggregate_That_Does_Not_Exist_Yet()
     {
-        var state = new SystemState(Library.LibraryData);
+        var state = new SystemState(LibraryOperations.LibraryData);
         var newBook = Aggregates.Book("978-0000000001");
 
         // Nothing there yet, so the previous value is null rather than an error.
@@ -1199,7 +1200,7 @@ public sealed class Tests
     [Fact]
     public void Should_Read_Only_The_Aggregate_A_Caller_Needs()
     {
-        var state = new SystemState(Library.LibraryData);
+        var state = new SystemState(LibraryOperations.LibraryData);
 
         // A caller changing a book never has to hold the whole system -- which is
         // the property that makes this work over a network.
@@ -1217,7 +1218,7 @@ public sealed class Tests
     [Fact]
     public void Should_Scope_Library_Writes_To_One_Aggregate()
     {
-        var system = new LibrarySystem(Library.LibraryData);
+        var system = new LibrarySystem(LibraryOperations.LibraryData);
 
         // The caller gets back the aggregate it changed, not the system.
         var book = system.AddBookItem("franck@gmail.com", Map.Of(
@@ -1228,7 +1229,7 @@ public sealed class Tests
 
         // And nothing else in the system moved.
         ShouldEqual(
-            _.DiffObjects(Library.LibraryData, system.Snapshot()),
+            _.DiffObjects(LibraryOperations.LibraryData, system.Snapshot()),
             Map.Of(("catalog", Map.Of(("booksByIsbn", Map.Of(("978-1779501127", Map.Of(
                 ("bookItems", Map.Of(("2", Map.Of(
                     ("id", "book-item-3"), ("libId", "brooklyn-lib"), ("isLent", false)))))))))))));
@@ -1250,7 +1251,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Read_An_Aggregate_With_Its_Version(string kind)
     {
-        var store = StoreOf(kind, Library.LibraryData);
+        var store = StoreOf(kind, LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
 
         var (value, version) = store.Read(book);
@@ -1269,7 +1270,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Apply_A_Diff_And_Advance_The_Version(string kind)
     {
-        var store = StoreOf(kind, Library.LibraryData);
+        var store = StoreOf(kind, LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
 
         var (before, version) = store.Read(book);
@@ -1289,7 +1290,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Merge_Two_Writers_On_Different_Paths(string kind)
     {
-        var store = StoreOf(kind, Library.LibraryData);
+        var store = StoreOf(kind, LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
 
         // Both read the same version, then write.
@@ -1307,7 +1308,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Reject_Two_Writers_On_The_Same_Path(string kind)
     {
-        var store = StoreOf(kind, Library.LibraryData);
+        var store = StoreOf(kind, LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
         var (start, version) = store.Read(book);
 
@@ -1327,7 +1328,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Keep_Aggregates_Independent(string kind)
     {
-        var store = StoreOf(kind, Library.LibraryData);
+        var store = StoreOf(kind, LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
         var member = Aggregates.Member("samantha@gmail.com");
 
@@ -1349,7 +1350,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Create_An_Aggregate_That_Is_Not_There_Yet(string kind)
     {
-        var store = StoreOf(kind, Library.LibraryData);
+        var store = StoreOf(kind, LibraryOperations.LibraryData);
         var fresh = Aggregates.Book("978-0000000001");
 
         var (missing, version) = store.Read(fresh);
@@ -1365,7 +1366,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Run_LibrarySystem_Unchanged(string kind)
     {
-        var system = new LibrarySystem(StoreOf(kind, Library.LibraryData));
+        var system = new LibrarySystem(StoreOf(kind, LibraryOperations.LibraryData));
 
         TitlesOf(system.GetBookLendings("franck@gmail.com", "samantha@gmail.com"))
             .Should().Equal("Watchmen");
@@ -1394,7 +1395,7 @@ public sealed class Tests
     public void Should_Survive_Parallel_Writes_To_Different_Aggregates(string kind)
     {
         const int books = 12;
-        var seed = Enumerable.Range(0, books).Aggregate(Library.LibraryData,
+        var seed = Enumerable.Range(0, books).Aggregate(LibraryOperations.LibraryData,
             (data, i) => _.Set(data, ["catalog", "booksByIsbn", $"978-000000000{i}"], Map.Of(
                 ("isbn", $"978-000000000{i}"), ("title", $"Book {i}"), ("authorIds", List.Of("alan-moore")))));
 
@@ -1416,7 +1417,7 @@ public sealed class Tests
     public void Should_Reject_A_Client_Older_Than_The_Retained_Tail()
     {
         // Room for two changes only.
-        var store = new DiffIndexedStore(Library.LibraryData, retainedChangesPerAggregate: 2);
+        var store = new DiffIndexedStore(LibraryOperations.LibraryData, retainedChangesPerAggregate: 2);
         var book = Aggregates.Book("978-1779501127");
 
         var (start, ancientVersion) = store.Read(book);
@@ -1442,7 +1443,7 @@ public sealed class Tests
     {
         // The same sequence against the store that keeps values: it can still work out
         // what moved, so a non-colliding late write is accepted rather than refused.
-        var store = new SnapshotAggregateStore(Library.LibraryData);
+        var store = new SnapshotAggregateStore(LibraryOperations.LibraryData);
         var book = Aggregates.Book("978-1779501127");
 
         var (start, ancientVersion) = store.Read(book);
@@ -1462,7 +1463,7 @@ public sealed class Tests
     [Fact]
     public void Should_Keep_Reads_And_Writes_Consistent_Through_The_System_Layer()
     {
-        var system = new LibrarySystem(Library.LibraryData);
+        var system = new LibrarySystem(LibraryOperations.LibraryData);
 
         TitlesOf(system.GetBookLendings("franck@gmail.com", "samantha@gmail.com"))
             .Should().Equal("Watchmen");
@@ -1480,7 +1481,7 @@ public sealed class Tests
     [Fact]
     public void Should_Add_A_Member_Through_The_System_Layer()
     {
-        var system = new LibrarySystem(Library.LibraryData);
+        var system = new LibrarySystem(LibraryOperations.LibraryData);
 
         system.AddMember("franck@gmail.com", Map.Of(
             ("email", "new@gmail.com"),
@@ -1491,7 +1492,7 @@ public sealed class Tests
 
         // The seed value is untouched: the store holds the new version, not the old one.
         UserManagement.IsMember(
-            _.Get<DataMap>(Library.LibraryData, "userManagementData"), "new@gmail.com")
+            _.Get<DataMap>(LibraryOperations.LibraryData, "userManagementData"), "new@gmail.com")
             .Should().BeFalse();
     }
 
@@ -1501,7 +1502,7 @@ public sealed class Tests
         const int books = 12;
 
         var seed = Enumerable.Range(0, books).Aggregate(
-            Library.LibraryData,
+            LibraryOperations.LibraryData,
             (data, i) => _.Set(data, ["catalog", "booksByIsbn", $"978-000000000{i}"], Map.Of(
                 ("isbn", $"978-000000000{i}"),
                 ("title", $"Book {i}"),
@@ -1711,7 +1712,7 @@ public sealed class Tests
     [Fact]
     public void Should_Read_At_Paths()
     {
-        var library = Library.LibraryData;
+        var library = LibraryOperations.LibraryData;
 
         var picked = _.At(library, [
             DataPath.Of("catalog", "booksByIsbn", "978-1779501127", "title"),

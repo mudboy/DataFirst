@@ -1,6 +1,6 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 /// Raised when a user cannot be added because the id is taken.
 public sealed class DuplicateUserException(string userId)

@@ -1,9 +1,9 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
+namespace DataFirst.Library;
 
 
-public static class Library
+public static class LibraryOperations
 {
 
     /// Passwords are hashed once, when this data is first built.
