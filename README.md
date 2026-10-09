@@ -25,7 +25,8 @@ test/
 
 ## Namespaces
 
-- `DataFirst`: the data types, stores and system state, plus the database code in `DataFirst.Database`.
+- `DataFirst`: the data types, stores and system state.
+- `DataFirst.Database`: SQLite access.
 - `DataFirst.Library`: the library domain.
 - `DataFirst.Lodash`: the generic data functions.
 - `DataFirst.Tests`: all test code.

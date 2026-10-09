@@ -1,7 +1,7 @@
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
 
-namespace DataFirst;
+namespace DataFirst.Database;
 
 /// A throwaway database holding a couple of books, so the reading code has something
 /// real to read from.

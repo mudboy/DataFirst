@@ -1,7 +1,7 @@
 using System.Data.Common;
 using System.Globalization;
 
-namespace DataFirst;
+namespace DataFirst.Database;
 
 public static class Db
 {
