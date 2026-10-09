@@ -7,7 +7,7 @@ using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
-namespace DataFirst.Tests;
+namespace DataFirst.Library.Tests;
 
 [Properties(Arbitrary = [typeof(Arbs)])]
 public sealed class SystemConsistencyTests
@@ -64,18 +64,18 @@ public sealed class SystemConsistencyTests
     [Property]
     public Property Common_paths_emptiness_is_symmetric() =>
         Prop.ForAll(Gens.Map.Zip(Gens.Map, (a, b) => (a, b)).ToArbitrary(), t =>
-            SystemConsistency.CommonPaths(t.a, t.b).Count == 0
-            == (SystemConsistency.CommonPaths(t.b, t.a).Count == 0));
+            Conflicts.CommonPaths(t.a, t.b).Count == 0
+            == (Conflicts.CommonPaths(t.b, t.a).Count == 0));
 
     [Property]
     public bool A_non_empty_diff_is_in_common_with_itself(DataMap diff) =>
         diff.IsEmpty
-        || SystemConsistency.CommonPaths(diff, diff).Count == _.ChangedPaths(diff).Count;
+        || Conflicts.CommonPaths(diff, diff).Count == _.ChangedPaths(diff).Count;
 
     [Property]
     public bool An_empty_diff_has_nothing_in_common_with_anything(DataMap diff) =>
-        SystemConsistency.CommonPaths(DataMap.Empty, diff).Count == 0
-        && SystemConsistency.CommonPaths(diff, DataMap.Empty).Count == 0;
+        Conflicts.CommonPaths(DataMap.Empty, diff).Count == 0
+        && Conflicts.CommonPaths(diff, DataMap.Empty).Count == 0;
 
     [Fact]
     public void A_conflict_message_lists_the_paths()

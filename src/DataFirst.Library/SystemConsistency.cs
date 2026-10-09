@@ -1,14 +1,6 @@
 using DataFirst.Lodash;
 
-namespace DataFirst;
-
-/// Raised when two mutations, started from the same version, changed the same
-/// location, so neither can be applied on top of the other without losing one.
-public sealed class ConcurrentModificationException(IReadOnlyList<DataPath> conflictingPaths)
-    : Exception($"Conflicting concurrent mutations at: {string.Join(", ", conflictingPaths)}")
-{
-    public IReadOnlyList<DataPath> ConflictingPaths { get; } = conflictingPaths;
-}
+namespace DataFirst.Library;
 
 /// Reconciles a mutation against whatever the system data became while that
 /// mutation was being calculated.
@@ -32,24 +24,10 @@ public static class SystemConsistency
         var previousToCurrent = DiffOf(previous, current);
         var previousToNext = DiffOf(previous, next);
 
-        var conflicts = CommonPaths(previousToCurrent, previousToNext);
+        var conflicts = Conflicts.CommonPaths(previousToCurrent, previousToNext);
         if (conflicts.Count > 0) throw new ConcurrentModificationException(conflicts);
 
         return _.ApplyDiff(current, previousToNext);
-    }
-
-    /// The locations both diffs touch. Empty means the two changes are independent
-    /// and can both be kept.
-    ///
-    /// Overlap, not equality: a change to `items` collides with a change to
-    /// `items[1]`, because one replaces what the other reaches into.
-    public static IReadOnlyList<DataPath> CommonPaths(DataMap diff1, DataMap diff2)
-    {
-        var first = _.ChangedPaths(diff1);
-
-        return _.ChangedPaths(diff2)
-            .Where(path => first.Any(path.Overlaps))
-            .ToList();
     }
 
     private static DataMap DiffOf(DataMap from, DataMap to) => _.DiffObjects(from, to);

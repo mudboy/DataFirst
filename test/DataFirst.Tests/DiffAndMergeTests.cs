@@ -156,8 +156,8 @@ public sealed class DiffAndMergeTests
         _.ChangedPaths(Map.Of()).Should().BeEmpty();
 
         var busy = _.DiffObjects(Map.Of(("a", 1)), Map.Of(("a", 2)));
-        SystemConsistency.CommonPaths(Map.Of(), busy).Should().BeEmpty();
-        SystemConsistency.CommonPaths(busy, Map.Of()).Should().BeEmpty();
+        Conflicts.CommonPaths(Map.Of(), busy).Should().BeEmpty();
+        Conflicts.CommonPaths(busy, Map.Of()).Should().BeEmpty();
     }
     [Fact]
     public void Probe_MergeIntoMissingPath()

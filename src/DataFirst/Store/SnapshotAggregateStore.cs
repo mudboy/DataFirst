@@ -46,7 +46,7 @@ public sealed class SnapshotAggregateStore : IAggregateStore
                 var previous = HistoricalValue(current, aggregate, expectedVersion);
                 var concurrent = _.DiffObjects(previous, currentValue);
 
-                var conflicts = SystemConsistency.CommonPaths(concurrent, diff);
+                var conflicts = Conflicts.CommonPaths(concurrent, diff);
                 if (conflicts.Count > 0) throw new ConcurrentModificationException(conflicts);
             }
 
