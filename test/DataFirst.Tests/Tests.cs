@@ -18,32 +18,32 @@ public sealed class Tests
         actual.Should().NotBe(expected);
 
     private static readonly DataMap watchmenMap = Map.Of(
-        "isbn", "978-1779501127",
-        "title", "Watchmen",
-        "publicationYear", 1987
+        ("isbn", "978-1779501127"),
+        ("title", "Watchmen"),
+        ("publicationYear", 1987)
     );
 
     private static readonly DataMap sevenHabitsMap = Map.Of(
-        "isbn", "978-1982137274",
-        "title", "7 Habits of Highly Effective People",
-        "publicationYear", 2020
+        ("isbn", "978-1982137274"),
+        ("title", "7 Habits of Highly Effective People"),
+        ("publicationYear", 2020)
     );
 
     private readonly DataMap searchResultsMap = Map.Of(
-        "978-1779501127", watchmenMap,
-        "978-1982137274", sevenHabitsMap
+        ("978-1779501127", watchmenMap),
+        ("978-1982137274", sevenHabitsMap)
     );
 
     private static readonly DataList authorsListMap = List.Of(
-        Map.Of("isbn", "978-1982137274",
-            "title", "7 Habits of Highly Effective People",
-            "author_name", "Steven Clarey"),
-        Map.Of("isbn", "978-1982137274",
-            "title", "7 Habits of Highly Effective People",
-            "author_name", "Tom Jons"),
-        Map.Of("isbn", "978-1779501127",
-            "title", "Watchmen",
-            "author_name", "Billy Gibson")
+        Map.Of(("isbn", "978-1982137274"),
+            ("title", "7 Habits of Highly Effective People"),
+            ("author_name", "Steven Clarey")),
+        Map.Of(("isbn", "978-1982137274"),
+            ("title", "7 Habits of Highly Effective People"),
+            ("author_name", "Tom Jons")),
+        Map.Of(("isbn", "978-1779501127"),
+            ("title", "Watchmen"),
+            ("author_name", "Billy Gibson"))
     );
 
     [Fact]
@@ -89,12 +89,12 @@ public sealed class Tests
         var maps = With.Database(Db.ReadFrom);
 
         var expected = List.Of(
-            Map.Of("isbn", "978-1982137274", 
-                               "title", "7 Habits of Highly Effective People", 
-                               "publication_year", 1998),
-            Map.Of("isbn", "978-0812981605", 
-                   "title", "Watchmen", 
-                   "publication_year", 1985));
+            Map.Of(("isbn", "978-1982137274"), 
+                               ("title", "7 Habits of Highly Effective People"), 
+                               ("publication_year", 1998)),
+            Map.Of(("isbn", "978-0812981605"), 
+                   ("title", "Watchmen"), 
+                   ("publication_year", 1985)));
 
         ShouldEqual(maps, expected);
     }
@@ -103,18 +103,18 @@ public sealed class Tests
     public void Should_Aggregate_Authors()
     {
         var rows7Habits = List.Of(
-            Map.Of("author_name", "Sean Covey",
-                "isbn", "978-1982137274",
-                "title", "7 Habits of Highly Effective People"),
-            Map.Of("author_name", "Stephen Covey",
-                "isbn", "978-1982137274",
-                "title", "7 Habits of Highly Effective People")
+            Map.Of(("author_name", "Sean Covey"),
+                ("isbn", "978-1982137274"),
+                ("title", "7 Habits of Highly Effective People")),
+            Map.Of(("author_name", "Stephen Covey"),
+                ("isbn", "978-1982137274"),
+                ("title", "7 Habits of Highly Effective People"))
         );
         
         var expectedResults = Map.Of(
-            "isbn", "978-1982137274",
-            "title", "7 Habits of Highly Effective People",
-            "authorNames", List.Of("Sean Covey", "Stephen Covey")
+            ("isbn", "978-1982137274"),
+            ("title", "7 Habits of Highly Effective People"),
+            ("authorNames", List.Of("Sean Covey", "Stephen Covey"))
         );
 
         var result = _.AggregateField(rows7Habits, "author_name", "authorNames");
@@ -125,12 +125,12 @@ public sealed class Tests
     public void Should_Aggregate_Fields()
     {
         var expectedResult = List.Of(
-            Map.Of("isbn", "978-1982137274",
-                "title", "7 Habits of Highly Effective People",
-                "authorNames", List.Of("Steven Clarey", "Tom Jons")),
-            Map.Of("isbn", "978-1779501127",
-                "title", "Watchmen",
-                "authorNames", List.Of("Billy Gibson"))
+            Map.Of(("isbn", "978-1982137274"),
+                ("title", "7 Habits of Highly Effective People"),
+                ("authorNames", List.Of("Steven Clarey", "Tom Jons"))),
+            Map.Of(("isbn", "978-1779501127"),
+                ("title", "Watchmen"),
+                ("authorNames", List.Of("Billy Gibson")))
         );
         var result = _.AggregateFields(authorsListMap, "isbn", "author_name", "authorNames");
         ShouldEqual(result, expectedResult);
@@ -141,72 +141,72 @@ public sealed class Tests
     {
         var books = List.Of(
             Map.Of(
-                "title", "7 Habits of Highly Effective People",
-                "isbn", "978-1982137274",
-                "available", true
+                ("title", "7 Habits of Highly Effective People"),
+                ("isbn", "978-1982137274"),
+                ("available", true)
             ),
             Map.Of(
-                "title", "The Power of Habit",
-                "isbn", "978-0812981605",
-                "available", false
+                ("title", "The Power of Habit"),
+                ("isbn", "978-0812981605"),
+                ("available", false)
             ));
 
         ShouldEqual(_.KeyBy(books, "isbn"),
             Map.Of(
-                "978-0812981605", Map.Of(
-                    "available", false,
-                    "isbn", "978-0812981605",
-                    "title", "The Power of Habit"
-                ),
-                "978-1982137274", Map.Of(
-                    "available", true,
-                    "isbn", "978-1982137274",
-                    "title", "7 Habits of Highly Effective People"
-                )
+                ("978-0812981605", Map.Of(
+                    ("available", false),
+                    ("isbn", "978-0812981605"),
+                    ("title", "The Power of Habit")
+                )),
+                ("978-1982137274", Map.Of(
+                    ("available", true),
+                    ("isbn", "978-1982137274"),
+                    ("title", "7 Habits of Highly Effective People")
+                ))
             ));
     }
 
     [Fact]
     public void Should_Update()
     {
-        var input = Map.Of("name", List.Of("one", "two", "one"));
+        var input = Map.Of(("name", List.Of("one", "two", "one")));
 
         var result = _.Update(input, "name", 
             o => DataList.Create(o.As<DataList>().Distinct()));
 
-        ShouldEqual(result, Map.Of("name", List.Of("one", "two")));
+        ShouldEqual(result, Map.Of(("name", List.Of("one", "two"))));
     }
 
     [Fact]
     public void Should_Unwind()
     {
         var customer = Map.Of(
-            "customer-id", "joe",
-            "items", List.Of(
+            ("customer-id", "joe"),
+            ("items", List.Of(
                 Map.Of(
-                    "item", "phone",
-                    "quantity", 1
+                    ("item", "phone"),
+                    ("quantity", 1)
                 ),
                 Map.Of(
-                    "item", "pencil",
-                    "quantity", 10
+                    ("item", "pencil"),
+                    ("quantity", 10)
                 )
-            ));
+            )));
 
         var expectedRes = List.Of(
             Map.Of(
-                "customer-id", "joe",
-                "items", Map.Of(
-                    "item", "phone",
-                    "quantity", 1
-                )
+                ("customer-id", "joe"),
+                ("items", Map.Of(
+                    ("item", "phone"),
+                    ("quantity", 1)
+                ))
             ),
             Map.Of(
-                "customer-id", "joe",
-                "items", Map.Of(
-                    "item", "pencil",
-                    "quantity", 10
-                )
+                ("customer-id", "joe"),
+                ("items", Map.Of(
+                    ("item", "pencil"),
+                    ("quantity", 10)
+                ))
             ));
 
         var result = _.Unwind(customer, "items");
@@ -232,9 +232,9 @@ public sealed class Tests
         var result = Catalog.SearchBooksByTitle(catalogData, "Wat");
 
         ShouldEqual(result, List.Of(
-            Map.Of("authorNames", List.Of("Alan Moore", "Dave Gibbons"),
-                "isbn", "978-1779501127",
-                "title", "Watchmen")));
+            Map.Of(("authorNames", List.Of("Alan Moore", "Dave Gibbons")),
+                ("isbn", "978-1779501127"),
+                ("title", "Watchmen"))));
     }
 
     [Fact]
@@ -250,9 +250,9 @@ public sealed class Tests
     public void Should_Walk_A_Path_That_Mixes_Keys_And_Indexes()
     {
         var data = Map.Of(
-            "a", List.Of(
-                Map.Of("x", "wrong"),
-                Map.Of("b", List.Of("zero", "one", "two"))));
+            ("a", List.Of(
+                Map.Of(("x", "wrong")),
+                Map.Of(("b", List.Of("zero", "one", "two"))))));
 
         _.Get<string>(data, ["a", 1, "b", 2]).Should().Be("two");
     }
@@ -261,20 +261,20 @@ public sealed class Tests
     public void Should_Write_Through_A_Path_That_Mixes_Keys_And_Indexes()
     {
         var data = Map.Of(
-            "a", List.Of(
-                Map.Of("b", List.Of("zero", "one"))));
+            ("a", List.Of(
+                Map.Of(("b", List.Of("zero", "one"))))));
 
         var updated = _.Set(data, ["a", 0, "b", 1], "ONE");
 
         ShouldEqual(updated, Map.Of(
-            "a", List.Of(
-                Map.Of("b", List.Of("zero", "ONE")))));
+            ("a", List.Of(
+                Map.Of(("b", List.Of("zero", "ONE")))))));
     }
 
     [Fact]
     public void Should_Check_A_Path_Through_Lists()
     {
-        var data = Map.Of("a", List.Of(Map.Of("b", "value")));
+        var data = Map.Of(("a", List.Of(Map.Of(("b", "value")))));
 
         _.ContainsKey(data, ["a", 0, "b"]).Should().BeTrue();
         _.ContainsKey(data, ["a", 0, "missing"]).Should().BeFalse();
@@ -311,7 +311,7 @@ public sealed class Tests
     [Fact]
     public void Should_Preserve_Insertion_Order()
     {
-        var map = Map.Of("z", 1, "a", 2, "m", 3);
+        var map = Map.Of(("z", 1), ("a", 2), ("m", 3));
 
         map.Keys.Should().Equal("z", "a", "m");
 
@@ -320,7 +320,7 @@ public sealed class Tests
         _.Set(map, "b", 4).Keys.Should().Equal("z", "a", "m", "b");
 
         // Order is presentation only -- equality ignores it.
-        ShouldEqual(Map.Of("a", 1, "b", 2), Map.Of("b", 2, "a", 1));
+        ShouldEqual(Map.Of(("a", 1), ("b", 2)), Map.Of(("b", 2), ("a", 1)));
     }
 
     [Fact]
@@ -337,12 +337,12 @@ public sealed class Tests
     public void Should_Be_Immutable()
     {
         var books = Map.Of(
-            "978-1779501127", Map.Of(
-                "isbn", "978-1779501127",
-                "title", "Watchmen",
-                "publicationYear", 1987,
-                "authorIds", List.Of("alan-moore", "dave-gibbons")
-            ));
+            ("978-1779501127", Map.Of(
+                ("isbn", "978-1779501127"),
+                ("title", "Watchmen"),
+                ("publicationYear", 1987),
+                ("authorIds", List.Of("alan-moore", "dave-gibbons"))
+            )));
 
         var nextBooks = _.Set(books, ["978-1779501127", "publicationYear"], 1986);
         var beforeName = _.Get(nextBooks, ["978-1779501127", "authorIds", 1]);
@@ -366,8 +366,8 @@ public sealed class Tests
     public void Should_Replace_Nested_List_Item_On_Set()
     {
         var books = Map.Of(
-            "978-1779501127", Map.Of(
-                "authorIds", List.Of("alan-moore", "dave-gibbons")));
+            ("978-1779501127", Map.Of(
+                ("authorIds", List.Of("alan-moore", "dave-gibbons")))));
 
         var updated = _.Set(books, ["978-1779501127", "authorIds", 1], "dave-chester-gibbons");
 
@@ -412,7 +412,7 @@ public sealed class Tests
     {
         var seenKeys = new System.Collections.Generic.List<string>();
 
-        var total = _.Reduce(Map.Of("a", 1, "b", 2), (int acc, DataValue v, StringOrInt key) =>
+        var total = _.Reduce(Map.Of(("a", 1), ("b", 2)), (int acc, DataValue v, StringOrInt key) =>
         {
             seenKeys.Add(key switch { string s => s, int i => i.ToString() });
             return acc + (int)v.As<long>();
@@ -425,7 +425,7 @@ public sealed class Tests
     [Fact]
     public void Should_Add_Non_Existent_Items_On_Set()
     {
-        var map = Map.Of("key", "value");
+        var map = Map.Of(("key", "value"));
         var updated = _.Set(map, "isVip", true);
 
         _.ContainsKey(updated, "isVip").Should().BeTrue();
@@ -436,26 +436,26 @@ public sealed class Tests
     public void Diffing()
     {
         var data1 = Map.Of(
-            "a", Map.Of(
-                "x", 1,
-                "y", List.Of(2, 3),
-                "z", 4
-            ));
+            ("a", Map.Of(
+                ("x", 1),
+                ("y", List.Of(2, 3)),
+                ("z", 4)
+            )));
         
         var data2 = Map.Of(
-            "a", Map.Of(
-                "x", 2,
-                "y", List.Of(2, 4),
-                "z", 4
-            ));
+            ("a", Map.Of(
+                ("x", 2),
+                ("y", List.Of(2, 4)),
+                ("z", 4)
+            )));
 
         // A list diff is keyed by index: only slot 1 changed, and there is no
         // padding to confuse with a real null.
         var expected = Map.Of(
-            "a", Map.Of(
-                "x", 2,
-                "y", Map.Of("1", 4)
-            ));
+            ("a", Map.Of(
+                ("x", 2),
+                ("y", Map.Of(("1", 4)))
+            )));
 
         var diff = _.DiffObjects(data1, data2);
         ShouldEqual(diff, expected);
@@ -473,7 +473,7 @@ public sealed class Tests
         
         var res = _.DiffObjects(d1, d2);
         
-        ShouldEqual(res, Map.Of("1", 4));
+        ShouldEqual(res, Map.Of(("1", 4)));
 
     }
 
@@ -482,12 +482,12 @@ public sealed class Tests
     {
         // "no-diff" used to be the sentinel, so a real value of "no-diff" was
         // silently dropped from the diff as though nothing had changed.
-        var before = Map.Of("status", "pending");
-        var after = Map.Of("status", "no-diff");
+        var before = Map.Of(("status", "pending"));
+        var after = Map.Of(("status", "no-diff"));
 
         ShouldEqual(
             _.DiffObjects(before, after).As<DataMap>(),
-            Map.Of("status", "no-diff"));
+            Map.Of(("status", "no-diff")));
     }
 
     [Fact]
@@ -506,8 +506,8 @@ public sealed class Tests
         changed.Should().Be("The Watchmen");
 
         var equivalentMaps = _.Diff(
-            Map.Of("title", "Watchmen"),
-            Map.Of("title", "Watchmen"));
+            Map.Of(("title", "Watchmen")),
+            Map.Of(("title", "Watchmen")));
         (equivalentMaps is NoDiff).Should().BeTrue();
     }
 
@@ -515,8 +515,8 @@ public sealed class Tests
     public void Should_List_Information_Paths()
     {
         var data = Map.Of(
-            "a", Map.Of("x", 1, "y", List.Of("p", "q")),
-            "b", true);
+            ("a", Map.Of(("x", 1), ("y", List.Of("p", "q")))),
+            ("b", true));
 
         _.InformationPaths(data).Select(p => p.ToString())
             .Should().BeEquivalentTo("a.x", "a.y.[0]", "a.y.[1]", "b");
@@ -528,11 +528,11 @@ public sealed class Tests
         // This is why a list diff is keyed by index. With positional padding the
         // null at slot 0 (meaning "unchanged") would be indistinguishable from
         // slot 1's real change to null, and merge would have to guess.
-        var previous = Map.Of("xs", List.Of(1, 2));
-        var next = Map.Of("xs", List.Of(1, DataNull.Instance));
+        var previous = Map.Of(("xs", List.Of(1, 2)));
+        var next = Map.Of(("xs", List.Of(1, DataNull.Instance)));
 
         var diff = _.DiffObjects(previous, next);
-        ShouldEqual(diff, Map.Of("xs", Map.Of("1", DataNull.Instance)));
+        ShouldEqual(diff, Map.Of(("xs", Map.Of(("1", DataNull.Instance)))));
 
         ShouldEqual(_.Merge(previous, diff), next);
     }
@@ -540,8 +540,8 @@ public sealed class Tests
     [Fact]
     public void Should_Merge_A_Diff_Back_Onto_Its_Source()
     {
-        var previous = Map.Of("a", Map.Of("x", 1, "y", List.Of(2, 3)));
-        var next = Map.Of("a", Map.Of("x", 9, "y", List.Of(2, 30)));
+        var previous = Map.Of(("a", Map.Of(("x", 1), ("y", List.Of(2, 3)))));
+        var next = Map.Of(("a", Map.Of(("x", 9), ("y", List.Of(2, 30)))));
 
         ShouldEqual(_.Merge(previous, _.DiffObjects(previous, next)), next);
     }
@@ -549,8 +549,8 @@ public sealed class Tests
     [Fact]
     public void Should_Fast_Forward_When_Nothing_Was_Committed_In_Between()
     {
-        var previous = Map.Of("a", 1);
-        var next = Map.Of("a", 2);
+        var previous = Map.Of(("a", 1));
+        var next = Map.Of(("a", 2));
 
         ShouldEqual(SystemConsistency.Reconcile(previous, previous, next), next);
     }
@@ -558,7 +558,7 @@ public sealed class Tests
     [Fact]
     public void Should_Merge_Concurrent_Changes_To_Different_Places()
     {
-        var state = new SystemState(Map.Of("catalog", Map.Of("a", 1, "b", 2)));
+        var state = new SystemState(Map.Of(("catalog", Map.Of(("a", 1), ("b", 2)))));
         var start = state.Get();
 
         // Two mutations calculated from the same version, touching different keys.
@@ -568,13 +568,13 @@ public sealed class Tests
         state.Commit(start, next1);
         state.Commit(start, next2); // reconciled against the first
 
-        ShouldEqual(state.Get(), Map.Of("catalog", Map.Of("a", 10, "b", 20)));
+        ShouldEqual(state.Get(), Map.Of(("catalog", Map.Of(("a", 10), ("b", 20)))));
     }
 
     [Fact]
     public void Should_Reject_Concurrent_Changes_To_The_Same_Place()
     {
-        var state = new SystemState(Map.Of("catalog", Map.Of("a", 1)));
+        var state = new SystemState(Map.Of(("catalog", Map.Of(("a", 1)))));
         var start = state.Get();
 
         state.Commit(start, _.Set(start, ["catalog", "a"], 10));
@@ -585,7 +585,7 @@ public sealed class Tests
             .Which.ConflictingPaths.Single().ToString().Should().Be("catalog.a");
 
         // The rejected commit left the state alone.
-        ShouldEqual(state.Get(), Map.Of("catalog", Map.Of("a", 10)));
+        ShouldEqual(state.Get(), Map.Of(("catalog", Map.Of(("a", 10)))));
     }
 
     [Fact]
@@ -594,8 +594,8 @@ public sealed class Tests
         // The DiffyLoop scenario: next changed the publication year while current
         // changed the title and an author name. Different places, so both survive.
         var previous = Map.Of(
-            "booksByIsbn", Map.Of("978-1779501127", Map.Of("title", "Watchmen", "publicationYear", 1987)),
-            "authorsById", Map.Of("dave-gibbons", Map.Of("name", "Dave Gibbons")));
+            ("booksByIsbn", Map.Of(("978-1779501127", Map.Of(("title", "Watchmen"), ("publicationYear", 1987))))),
+            ("authorsById", Map.Of(("dave-gibbons", Map.Of(("name", "Dave Gibbons"))))));
 
         var next = _.Set(previous, ["booksByIsbn", "978-1779501127", "publicationYear"], 1986);
 
@@ -604,15 +604,15 @@ public sealed class Tests
             ["authorsById", "dave-gibbons", "name"], "David Chester Gibbons");
 
         ShouldEqual(SystemConsistency.Reconcile(current, previous, next), Map.Of(
-            "booksByIsbn", Map.Of("978-1779501127", Map.Of("title", "The Watchmen", "publicationYear", 1986)),
-            "authorsById", Map.Of("dave-gibbons", Map.Of("name", "David Chester Gibbons"))));
+            ("booksByIsbn", Map.Of(("978-1779501127", Map.Of(("title", "The Watchmen"), ("publicationYear", 1986))))),
+            ("authorsById", Map.Of(("dave-gibbons", Map.Of(("name", "David Chester Gibbons")))))));
     }
 
     [Fact]
     public void Should_Not_Lose_Updates_Under_Parallel_Commits()
     {
         const int workers = 16;
-        var state = new SystemState(Map.Of("counters", Map.Of()));
+        var state = new SystemState(Map.Of(("counters", Map.Of())));
 
         Parallel.For(0, workers, i =>
             state.Update(current => _.Set(current, ["counters", $"w{i}"], i)));
@@ -638,10 +638,10 @@ public sealed class Tests
     public void Should_Report_Every_Error_With_Its_Path()
     {
         var book = Map.Of(
-            "isbn", "nope",
-            "title", "",
-            "publicationYear", 3000,
-            "authorIds", List.Of());
+            ("isbn", "nope"),
+            ("title", ""),
+            ("publicationYear", 3000),
+            ("authorIds", List.Of()));
 
         var errors = Validation.Validate(Schemas.Book, book).Errors()
             .Select(e => e.ToString()).ToList();
@@ -657,7 +657,7 @@ public sealed class Tests
     [Fact]
     public void Should_Report_A_Missing_Required_Field()
     {
-        var errors = Validation.Validate(Schemas.Book, Map.Of("title", "Watchmen")).Errors();
+        var errors = Validation.Validate(Schemas.Book, Map.Of(("title", "Watchmen"))).Errors();
 
         errors.Select(e => e.ToString()).Should().BeEquivalentTo(
             "isbn: is required but missing",
@@ -668,12 +668,12 @@ public sealed class Tests
     public void Should_Path_Errors_Through_Nested_Structures()
     {
         var book = Map.Of(
-            "isbn", "978-1779501127",
-            "title", "Watchmen",
-            "authorIds", List.Of("alan-moore"),
-            "bookItems", List.Of(
-                Map.Of("id", "book-item-1", "libId", "nyc", "isLent", false),
-                Map.Of("id", "book-item-2", "libId", "nyc", "isLent", "no")));
+            ("isbn", "978-1779501127"),
+            ("title", "Watchmen"),
+            ("authorIds", List.Of("alan-moore")),
+            ("bookItems", List.Of(
+                Map.Of(("id", "book-item-1"), ("libId", "nyc"), ("isLent", false)),
+                Map.Of(("id", "book-item-2"), ("libId", "nyc"), ("isLent", "no")))));
 
         Validation.Validate(Schemas.Book, book).Errors().Single().ToString()
             .Should().Be("bookItems.[1].isLent: expected boolean, but found string");
@@ -683,12 +683,12 @@ public sealed class Tests
     public void Should_Path_Errors_Through_Id_Keyed_Collections()
     {
         var catalog = Map.Of(
-            "booksByIsbn", Map.Of(
-                "978-1779501127", Map.Of(
-                    "isbn", "978-1779501127",
-                    "title", "Watchmen",
-                    "authorIds", List.Of("alan-moore", "alan-moore"))),
-            "authorsById", Map.Of());
+            ("booksByIsbn", Map.Of(
+                ("978-1779501127", Map.Of(
+                    ("isbn", "978-1779501127"),
+                    ("title", "Watchmen"),
+                    ("authorIds", List.Of("alan-moore", "alan-moore")))))),
+            ("authorsById", Map.Of()));
 
         Schemas.ValidateCatalog(catalog).Errors().Single().ToString()
             .Should().Be("booksByIsbn.978-1779501127.authorIds: must not contain duplicates");
@@ -698,13 +698,13 @@ public sealed class Tests
     public void Should_Reject_Properties_The_Schema_Does_Not_Name()
     {
         var author = Map.Of(
-            "name", "Alan Moore",
-            "bookIsbns", List.Of("978-1779501127"),
-            "favouriteColour", "black");
+            ("name", "Alan Moore"),
+            ("bookIsbns", List.Of("978-1779501127")),
+            ("favouriteColour", "black"));
 
         Schemas.ValidateCatalog(Map.Of(
-                "booksByIsbn", Map.Of(),
-                "authorsById", Map.Of("alan-moore", author)))
+                ("booksByIsbn", Map.Of()),
+                ("authorsById", Map.Of(("alan-moore", author)))))
             .Errors().Single().ToString()
             .Should().Be("authorsById.alan-moore.favouriteColour: is not a permitted property");
     }
@@ -713,7 +713,7 @@ public sealed class Tests
     public void Should_Ignore_Keywords_That_Do_Not_Apply_To_The_Value()
     {
         // minimum says nothing about a string, as in JSON Schema.
-        var schema = Map.Of("minimum", 10, "minLength", 2);
+        var schema = Map.Of(("minimum", 10), ("minLength", 2));
 
         Validation.Validate(schema, "ab").IsValid().Should().BeTrue();
         Validation.Validate(schema, 20).IsValid().Should().BeTrue();
@@ -724,15 +724,15 @@ public sealed class Tests
     [Fact]
     public void Should_Support_Unions_Of_Types_And_Schemas()
     {
-        var nullableIsbn = Map.Of("type", List.Of("string", "null"));
+        var nullableIsbn = Map.Of(("type", List.Of("string", "null")));
 
         Validation.Validate(nullableIsbn, "978-1779501127").IsValid().Should().BeTrue();
         Validation.Validate(nullableIsbn, DataNull.Instance).IsValid().Should().BeTrue();
         Validation.Validate(nullableIsbn, 1987).IsValid().Should().BeFalse();
 
-        var stringOrCount = Map.Of("anyOf", List.Of(
-            Map.Of("type", "string"),
-            Map.Of("type", "integer", "minimum", 0)));
+        var stringOrCount = Map.Of(("anyOf", List.Of(
+            Map.Of(("type", "string")),
+            Map.Of(("type", "integer"), ("minimum", 0)))));
 
         Validation.Validate(stringOrCount, "x").IsValid().Should().BeTrue();
         Validation.Validate(stringOrCount, 3).IsValid().Should().BeTrue();
@@ -742,7 +742,7 @@ public sealed class Tests
     [Fact]
     public void Should_Validate_A_Request_At_The_Boundary()
     {
-        var request = Map.Of("title", "Watchmen", "fields", List.Of("title", "isbn"));
+        var request = Map.Of(("title", "Watchmen"), ("fields", List.Of("title", "isbn")));
 
         Library.SearchBooksJson(Library.LibraryData, request)
             .Should().Be("""[{"title":"Watchmen","isbn":"978-1779501127"}]""");
@@ -751,7 +751,7 @@ public sealed class Tests
     [Fact]
     public void Should_Reject_A_Malformed_Request_At_The_Boundary()
     {
-        var badRequest = Map.Of("title", "", "fields", List.Of("title", "publisher"));
+        var badRequest = Map.Of(("title", ""), ("fields", List.Of("title", "publisher")));
 
         var search = () => Library.SearchBooksJson(Library.LibraryData, badRequest);
 
@@ -769,16 +769,16 @@ public sealed class Tests
         var strict = _.Set(Schemas.Book, ["properties", "title", "minLength"], 5).As<DataMap>();
 
         Validation.Validate(Schemas.Book, Map.Of(
-            "isbn", "978-1779501127", "title", "Wat", "authorIds", List.Of("a"))).IsValid()
+            ("isbn", "978-1779501127"), ("title", "Wat"), ("authorIds", List.Of("a")))).IsValid()
             .Should().BeTrue();
 
         Validation.Validate(strict, Map.Of(
-            "isbn", "978-1779501127", "title", "Wat", "authorIds", List.Of("a"))).IsValid()
+            ("isbn", "978-1779501127"), ("title", "Wat"), ("authorIds", List.Of("a")))).IsValid()
             .Should().BeFalse();
 
         ShouldEqual(
             _.DiffObjects(Schemas.Book, strict),
-            Map.Of("properties", Map.Of("title", Map.Of("minLength", 5))));
+            Map.Of(("properties", Map.Of(("title", Map.Of(("minLength", 5)))))));
     }
 
     private static DataMap Users => _.Get<DataMap>(Library.LibraryData, "userManagementData");
@@ -860,8 +860,8 @@ public sealed class Tests
     public void Should_Add_A_Member()
     {
         var member = Map.Of(
-            "email", "new@gmail.com",
-            "password", Passwords.Hash("new-secret", 1000));
+            ("email", "new@gmail.com"),
+            ("password", Passwords.Hash("new-secret", 1000)));
 
         var updated = UserManagement.AddMember(Users, member);
 
@@ -875,8 +875,8 @@ public sealed class Tests
     [Fact]
     public void Should_Reject_A_Member_That_Does_Not_Match_The_Schema()
     {
-        var noPassword = Map.Of("email", "new@gmail.com");
-        var badEmail = Map.Of("email", "not-an-email", "password", Passwords.Hash("x", 1000));
+        var noPassword = Map.Of(("email", "new@gmail.com"));
+        var badEmail = Map.Of(("email", "not-an-email"), ("password", Passwords.Hash("x", 1000)));
 
         var addNoPassword = () => UserManagement.AddMember(Users, noPassword);
         addNoPassword.Should().Throw<SchemaViolationException>()
@@ -891,16 +891,16 @@ public sealed class Tests
     public void Should_Reject_A_Duplicate_User()
     {
         var existing = Map.Of(
-            "email", "samantha@gmail.com",
-            "password", Passwords.Hash("another", 1000));
+            ("email", "samantha@gmail.com"),
+            ("password", Passwords.Hash("another", 1000)));
 
         var addAgain = () => UserManagement.AddMember(Users, existing);
         addAgain.Should().Throw<DuplicateUserException>();
 
         // Across collections too: an id taken by a librarian is not free for a member.
         var asMember = Map.Of(
-            "email", "franck@gmail.com",
-            "password", Passwords.Hash("another", 1000));
+            ("email", "franck@gmail.com"),
+            ("password", Passwords.Hash("another", 1000)));
 
         var addLibrarianAsMember = () => UserManagement.AddMember(Users, asMember);
         addLibrarianAsMember.Should().Throw<DuplicateUserException>();
@@ -912,9 +912,9 @@ public sealed class Tests
         ShouldEqual(
             UserManagement.BookLendings(Users, "samantha@gmail.com"),
             List.Of(Map.Of(
-                "bookItemId", "book-item-1",
-                "bookIsbn", "978-1779501127",
-                "lendingDate", "2020-04-23")));
+                ("bookItemId", "book-item-1"),
+                ("bookIsbn", "978-1779501127"),
+                ("lendingDate", "2020-04-23"))));
 
         // A member with no lendings recorded gets an empty list, not an error.
         UserManagement.BookLendings(Users, "vip@gmail.com").Should().BeEmpty();
@@ -945,20 +945,20 @@ public sealed class Tests
     }
 
     private static DataMap CatalogFixture => Map.Of(
-        "booksByIsbn", Map.Of(
-            "978-1779501127", Map.Of(
-                "isbn", "978-1779501127",
-                "title", "Watchmen",
-                "publicationYear", 1987,
-                "authorIds", List.Of("alan-moore")),
-            "978-1982137274", Map.Of(
-                "isbn", "978-1982137274",
-                "title", "7 Habits of Highly Effective People",
-                "publicationYear", 2020,
-                "authorIds", List.Of("stephen-covey"))),
-        "authorsById", Map.Of(
-            "alan-moore", Map.Of("name", "Alan Moore", "bookIsbns", List.Of("978-1779501127")),
-            "stephen-covey", Map.Of("name", "Stephen Covey", "bookIsbns", List.Of("978-1982137274"))));
+        ("booksByIsbn", Map.Of(
+            ("978-1779501127", Map.Of(
+                ("isbn", "978-1779501127"),
+                ("title", "Watchmen"),
+                ("publicationYear", 1987),
+                ("authorIds", List.Of("alan-moore")))),
+            ("978-1982137274", Map.Of(
+                ("isbn", "978-1982137274"),
+                ("title", "7 Habits of Highly Effective People"),
+                ("publicationYear", 2020),
+                ("authorIds", List.Of("stephen-covey")))))),
+        ("authorsById", Map.Of(
+            ("alan-moore", Map.Of(("name", "Alan Moore"), ("bookIsbns", List.Of("978-1779501127")))),
+            ("stephen-covey", Map.Of(("name", "Stephen Covey"), ("bookIsbns", List.Of("978-1982137274")))))));
 
     private static IEnumerable<string> TitlesOf(DataList results) =>
         results.Select(r => _.Get<string>(r, "title"));
@@ -970,31 +970,31 @@ public sealed class Tests
         TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of()))
             .Should().BeEquivalentTo("Watchmen", "7 Habits of Highly Effective People");
 
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("author", "Moore")))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("author", "Moore"))))
             .Should().Equal("Watchmen");
 
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("publishedAfter", 2000)))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("publishedAfter", 2000))))
             .Should().Equal("7 Habits of Highly Effective People");
 
         // Criteria combine with AND.
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("title", "Habits", "publishedBefore", 2000)))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("title", "Habits"), ("publishedBefore", 2000))))
             .Should().BeEmpty();
 
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("title", "Habits", "publishedAfter", 2000)))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("title", "Habits"), ("publishedAfter", 2000))))
             .Should().Equal("7 Habits of Highly Effective People");
 
         // Bounds are inclusive.
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("publishedAfter", 1987, "publishedBefore", 1987)))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("publishedAfter", 1987), ("publishedBefore", 1987))))
             .Should().Equal("Watchmen");
     }
 
     [Fact]
     public void Should_Search_Case_Insensitively()
     {
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("title", "watchMEN")))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("title", "watchMEN"))))
             .Should().Equal("Watchmen");
 
-        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of("author", "moore")))
+        TitlesOf(Catalog.SearchBook(CatalogFixture, Map.Of(("author", "moore"))))
             .Should().Equal("Watchmen");
 
         TitlesOf(Catalog.SearchBooksByTitle(CatalogFixture, "WATCH"))
@@ -1004,7 +1004,7 @@ public sealed class Tests
     [Fact]
     public void Should_Reject_A_Search_Criterion_The_Schema_Does_Not_Name()
     {
-        var search = () => Catalog.SearchBook(CatalogFixture, Map.Of("publisher", "DC"));
+        var search = () => Catalog.SearchBook(CatalogFixture, Map.Of(("publisher", "DC")));
 
         search.Should().Throw<SchemaViolationException>()
             .Which.Errors.Single().ToString().Should().Be("publisher: is not a permitted property");
@@ -1019,20 +1019,20 @@ public sealed class Tests
         ShouldEqual(
             Catalog.GetBookLendings(catalog, lendings),
             List.Of(Map.Of(
-                "bookItemId", "book-item-1",
-                "lendingDate", "2020-04-23",
-                "title", "Watchmen",
-                "isbn", "978-1779501127",
-                "authorNames", List.Of("Alan Moore", "Dave Gibbons"))));
+                ("bookItemId", "book-item-1"),
+                ("lendingDate", "2020-04-23"),
+                ("title", "Watchmen"),
+                ("isbn", "978-1779501127"),
+                ("authorNames", List.Of("Alan Moore", "Dave Gibbons")))));
     }
 
     [Fact]
     public void Should_Reject_A_Lending_For_A_Book_Not_In_The_Catalogue()
     {
         var orphan = List.Of(Map.Of(
-            "bookItemId", "book-item-9",
-            "bookIsbn", "978-0000000000",
-            "lendingDate", "2020-04-23"));
+            ("bookItemId", "book-item-9"),
+            ("bookIsbn", "978-0000000000"),
+            ("lendingDate", "2020-04-23")));
 
         var describe = () => Catalog.GetBookLendings(CatalogFixture, orphan);
 
@@ -1043,17 +1043,17 @@ public sealed class Tests
     [Fact]
     public void Should_Add_A_Book_Item()
     {
-        var info = Map.Of("isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib");
+        var info = Map.Of(("isbn", "978-1779501127"), ("id", "book-item-3"), ("libId", "brooklyn-lib"));
 
         var updated = Catalog.AddBookItem(CatalogFixture, info);
 
         ShouldEqual(
             _.Get<DataList>(updated, ["booksByIsbn", "978-1779501127", "bookItems"]),
-            List.Of(Map.Of("id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)));
+            List.Of(Map.Of(("id", "book-item-3"), ("libId", "brooklyn-lib"), ("isLent", false))));
 
         // A new item is not lent, and isLent cannot be supplied.
         var withIsLent = Map.Of(
-            "isbn", "978-1779501127", "id", "book-item-4", "libId", "brooklyn-lib", "isLent", true);
+            ("isbn", "978-1779501127"), ("id", "book-item-4"), ("libId", "brooklyn-lib"), ("isLent", true));
 
         var addWithIsLent = () => Catalog.AddBookItem(CatalogFixture, withIsLent);
         addWithIsLent.Should().Throw<SchemaViolationException>()
@@ -1067,7 +1067,7 @@ public sealed class Tests
     public void Should_Reject_A_Duplicate_Book_Item()
     {
         var catalog = _.Get<DataMap>(Library.LibraryData, "catalog");
-        var taken = Map.Of("isbn", "978-1779501127", "id", "book-item-1", "libId", "nyc-central-lib");
+        var taken = Map.Of(("isbn", "978-1779501127"), ("id", "book-item-1"), ("libId", "nyc-central-lib"));
 
         var add = () => Catalog.AddBookItem(catalog, taken);
         add.Should().Throw<DuplicateBookItemException>();
@@ -1076,7 +1076,7 @@ public sealed class Tests
     [Fact]
     public void Should_Reject_A_Book_Item_For_An_Unknown_Book()
     {
-        var info = Map.Of("isbn", "978-0000000000", "id", "book-item-3", "libId", "brooklyn-lib");
+        var info = Map.Of(("isbn", "978-0000000000"), ("id", "book-item-3"), ("libId", "brooklyn-lib"));
 
         var add = () => Catalog.AddBookItem(CatalogFixture, info);
         add.Should().Throw<KeyNotFoundException>().WithMessage("*978-0000000000*");
@@ -1101,7 +1101,7 @@ public sealed class Tests
     [Fact]
     public void Should_Add_A_Book_Item_End_To_End()
     {
-        var info = Map.Of("isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib");
+        var info = Map.Of(("isbn", "978-1779501127"), ("id", "book-item-3"), ("libId", "brooklyn-lib"));
 
         var updated = Library.AddBookItem(Library.LibraryData, "vip@gmail.com", info);
 
@@ -1116,19 +1116,19 @@ public sealed class Tests
         // The only difference is the new item.
         ShouldEqual(
             _.DiffObjects(Library.LibraryData, updated),
-            Map.Of("catalog", Map.Of("booksByIsbn", Map.Of("978-1779501127", Map.Of(
-                "bookItems", Map.Of("2", Map.Of(
-                    "id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)))))));
+            Map.Of(("catalog", Map.Of(("booksByIsbn", Map.Of(("978-1779501127", Map.Of(
+                ("bookItems", Map.Of(("2", Map.Of(
+                    ("id", "book-item-3"), ("libId", "brooklyn-lib"), ("isLent", false)))))))))))));
     }
 
     private static DataMap TwoBookLibrary => _.Set(
         Library.LibraryData,
         ["catalog", "booksByIsbn", "978-1982137274"],
         Map.Of(
-            "isbn", "978-1982137274",
-            "title", "7 Habits of Highly Effective People",
-            "publicationYear", 2020,
-            "authorIds", List.Of("alan-moore")));
+            ("isbn", "978-1982137274"),
+            ("title", "7 Habits of Highly Effective People"),
+            ("publicationYear", 2020),
+            ("authorIds", List.Of("alan-moore"))));
 
     [Fact]
     public void Should_Not_Contend_Across_Aggregates()
@@ -1191,7 +1191,7 @@ public sealed class Tests
         (state.Read(newBook) is DataNull).Should().BeTrue();
 
         state.Commit(newBook, DataNull.Instance, Map.Of(
-            "isbn", "978-0000000001", "title", "New", "authorIds", List.Of("alan-moore")));
+            ("isbn", "978-0000000001"), ("title", "New"), ("authorIds", List.Of("alan-moore"))));
 
         _.Get<string>(state.Get(), [.. newBook, "title"]).Should().Be("New");
     }
@@ -1221,7 +1221,7 @@ public sealed class Tests
 
         // The caller gets back the aggregate it changed, not the system.
         var book = system.AddBookItem("franck@gmail.com", Map.Of(
-            "isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib"));
+            ("isbn", "978-1779501127"), ("id", "book-item-3"), ("libId", "brooklyn-lib")));
 
         _.Get<DataList>(book, "bookItems").Select(i => _.Get<string>(i, "id"))
             .Should().Equal("book-item-1", "book-item-2", "book-item-3");
@@ -1229,9 +1229,9 @@ public sealed class Tests
         // And nothing else in the system moved.
         ShouldEqual(
             _.DiffObjects(Library.LibraryData, system.Snapshot()),
-            Map.Of("catalog", Map.Of("booksByIsbn", Map.Of("978-1779501127", Map.Of(
-                "bookItems", Map.Of("2", Map.Of(
-                    "id", "book-item-3", "libId", "brooklyn-lib", "isLent", false)))))));
+            Map.Of(("catalog", Map.Of(("booksByIsbn", Map.Of(("978-1779501127", Map.Of(
+                ("bookItems", Map.Of(("2", Map.Of(
+                    ("id", "book-item-3"), ("libId", "brooklyn-lib"), ("isLent", false)))))))))))));
     }
 
     // ---- IAggregateStore: the two implementations must agree ----
@@ -1353,7 +1353,7 @@ public sealed class Tests
         var fresh = Aggregates.Book("978-0000000001");
 
         var (missing, version) = store.Read(fresh);
-        var book = Map.Of("isbn", "978-0000000001", "title", "New", "authorIds", List.Of("alan-moore"));
+        var book = Map.Of(("isbn", "978-0000000001"), ("title", "New"), ("authorIds", List.Of("alan-moore")));
 
         var created = store.Commit(fresh, version, _.DiffObjects(missing, book));
 
@@ -1371,7 +1371,7 @@ public sealed class Tests
             .Should().Equal("Watchmen");
 
         var book = system.AddBookItem("vip@gmail.com", Map.Of(
-            "isbn", "978-1779501127", "id", "book-item-3", "libId", "brooklyn-lib"));
+            ("isbn", "978-1779501127"), ("id", "book-item-3"), ("libId", "brooklyn-lib")));
         _.Get<DataList>(book, "bookItems").Count.Should().Be(3);
 
         system.BlockMember("franck@gmail.com", "samantha@gmail.com");
@@ -1380,7 +1380,7 @@ public sealed class Tests
             .Should().BeTrue();
 
         system.AddMember("franck@gmail.com", Map.Of(
-            "email", "new@gmail.com", "password", Passwords.Hash("new-secret", 1000)));
+            ("email", "new@gmail.com"), ("password", Passwords.Hash("new-secret", 1000))));
         UserManagement.IsMember(
             _.Get<DataMap>(system.Snapshot(), "userManagementData"), "new@gmail.com")
             .Should().BeTrue();
@@ -1396,13 +1396,13 @@ public sealed class Tests
         const int books = 12;
         var seed = Enumerable.Range(0, books).Aggregate(Library.LibraryData,
             (data, i) => _.Set(data, ["catalog", "booksByIsbn", $"978-000000000{i}"], Map.Of(
-                "isbn", $"978-000000000{i}", "title", $"Book {i}", "authorIds", List.Of("alan-moore"))));
+                ("isbn", $"978-000000000{i}"), ("title", $"Book {i}"), ("authorIds", List.Of("alan-moore")))));
 
         var system = new LibrarySystem(StoreOf(kind, seed));
 
         Parallel.For(0, books, i =>
             system.AddBookItem("franck@gmail.com", Map.Of(
-                "isbn", $"978-000000000{i}", "id", $"item-{i}", "libId", "brooklyn-lib")));
+                ("isbn", $"978-000000000{i}"), ("id", $"item-{i}"), ("libId", "brooklyn-lib"))));
 
         var final = system.Snapshot();
         for (var i = 0; i < books; i++)
@@ -1483,8 +1483,8 @@ public sealed class Tests
         var system = new LibrarySystem(Library.LibraryData);
 
         system.AddMember("franck@gmail.com", Map.Of(
-            "email", "new@gmail.com",
-            "password", Passwords.Hash("new-secret", 1000)));
+            ("email", "new@gmail.com"),
+            ("password", Passwords.Hash("new-secret", 1000))));
 
         var users = _.Get<DataMap>(system.Snapshot(), "userManagementData");
         UserManagement.IsMember(users, "new@gmail.com").Should().BeTrue();
@@ -1503,17 +1503,17 @@ public sealed class Tests
         var seed = Enumerable.Range(0, books).Aggregate(
             Library.LibraryData,
             (data, i) => _.Set(data, ["catalog", "booksByIsbn", $"978-000000000{i}"], Map.Of(
-                "isbn", $"978-000000000{i}",
-                "title", $"Book {i}",
-                "authorIds", List.Of("alan-moore"))));
+                ("isbn", $"978-000000000{i}"),
+                ("title", $"Book {i}"),
+                ("authorIds", List.Of("alan-moore")))));
 
         var system = new LibrarySystem(seed);
 
         Parallel.For(0, books, i =>
             system.AddBookItem("franck@gmail.com", Map.Of(
-                "isbn", $"978-000000000{i}",
-                "id", $"item-{i}",
-                "libId", "brooklyn-lib")));
+                ("isbn", $"978-000000000{i}"),
+                ("id", $"item-{i}"),
+                ("libId", "brooklyn-lib"))));
 
         var final = system.Snapshot();
         for (var i = 0; i < books; i++)
@@ -1530,8 +1530,8 @@ public sealed class Tests
         // Reachable whenever two people edit one book and only one of them adds the
         // first copy: the paths are disjoint, the merge is valid, and the descent
         // walks through a key the target does not have.
-        var previous = Map.Of("book", Map.Of("title", "Watchmen"));
-        var next = Map.Of("book", Map.Of("title", "Watchmen", "items", List.Of(Map.Of("id", "a"))));
+        var previous = Map.Of(("book", Map.Of(("title", "Watchmen"))));
+        var next = Map.Of(("book", Map.Of(("title", "Watchmen"), ("items", List.Of(Map.Of(("id", "a")))))));
 
         ShouldEqual(_.Merge(previous, _.DiffObjects(previous, next)), next);
     }
@@ -1542,19 +1542,19 @@ public sealed class Tests
         // The following step decides the container: a name makes a map, an index a list.
         ShouldEqual(
             _.Set(Map.Of(), ["a", "b"], 1),
-            Map.Of("a", Map.Of("b", 1)));
+            Map.Of(("a", Map.Of(("b", 1)))));
 
         ShouldEqual(
             _.Set(Map.Of(), ["a", 0, "b"], 1),
-            Map.Of("a", List.Of(Map.Of("b", 1))));
+            Map.Of(("a", List.Of(Map.Of(("b", 1))))));
 
         // A null stands in for absent, so a diff can fill one in.
         ShouldEqual(
-            _.Set(Map.Of("a", DataNull.Instance), ["a", "b"], 1),
-            Map.Of("a", Map.Of("b", 1)));
+            _.Set(Map.Of(("a", DataNull.Instance)), ["a", "b"], 1),
+            Map.Of(("a", Map.Of(("b", 1)))));
 
         // A leaf part-way along is still an error, not something to overwrite.
-        var throughALeaf = () => _.Set(Map.Of("a", "leaf"), ["a", "b"], 1);
+        var throughALeaf = () => _.Set(Map.Of(("a", "leaf")), ["a", "b"], 1);
         throughALeaf.Should().Throw<InvalidOperationException>();
     }
 
@@ -1563,16 +1563,16 @@ public sealed class Tests
     {
         // Creating a value is the same operation as changing one, so a store needs no
         // separate path for an aggregate that does not exist yet.
-        var book = Map.Of("isbn", "978-1779501127", "title", "Watchmen");
+        var book = Map.Of(("isbn", "978-1779501127"), ("title", "Watchmen"));
 
         var born = _.DiffObjects(DataNull.Instance, book);
-        ShouldEqual(born, Map.Of("isbn", "978-1779501127", "title", "Watchmen"));
+        ShouldEqual(born, Map.Of(("isbn", "978-1779501127"), ("title", "Watchmen")));
         ShouldEqual(_.Merge(DataNull.Instance, born).As<DataMap>(), book);
 
         // And the reverse reads as every key removed.
         ShouldEqual(
             _.DiffObjects(book, DataNull.Instance),
-            Map.Of("isbn", DataNull.Instance, "title", DataNull.Instance));
+            Map.Of(("isbn", DataNull.Instance), ("title", DataNull.Instance)));
 
         // A list cannot be rebuilt from its diff alone. Diffs are always maps, with
         // indices as string keys, so the root container type is gone by then --
@@ -1580,7 +1580,7 @@ public sealed class Tests
         var list = List.Of("a", "b");
         ShouldEqual(
             _.Merge(DataNull.Instance, _.DiffObjects(DataNull.Instance, list)).As<DataMap>(),
-            Map.Of("0", "a", "1", "b"));
+            Map.Of(("0", "a"), ("1", "b")));
     }
 
     [Fact]
@@ -1601,13 +1601,13 @@ public sealed class Tests
     [Fact]
     public void Should_Conflict_When_One_Writer_Replaces_What_Another_Reaches_Into()
     {
-        var start = Map.Of("items", List.Of("a", "b"));
+        var start = Map.Of(("items", List.Of("a", "b")));
 
         // One writer drops the whole list, the other edits one element. The paths are
         // not equal, but they are not independent: exact intersection let both
         // through and the merge then produced a map where a list should be.
-        var wholesale = _.DiffObjects(start, Map.Of("items", DataNull.Instance));
-        var element = _.DiffObjects(start, Map.Of("items", List.Of("a", "c")));
+        var wholesale = _.DiffObjects(start, Map.Of(("items", DataNull.Instance)));
+        var element = _.DiffObjects(start, Map.Of(("items", List.Of("a", "c"))));
 
         // Rendered "items.1", not "items.[1]": inside a diff an index is a string key.
         SystemConsistency.CommonPaths(wholesale, element)
@@ -1621,7 +1621,7 @@ public sealed class Tests
     [MemberData(nameof(StoreKinds))]
     public void Should_Reject_A_Write_Into_Something_Another_Writer_Replaced(string kind)
     {
-        var store = StoreOf(kind, Map.Of("book", Map.Of("items", List.Of("a", "b"))));
+        var store = StoreOf(kind, Map.Of(("book", Map.Of(("items", List.Of("a", "b"))))));
         var book = DataPath.Of("book");
 
         var (start, version) = store.Read(book);
@@ -1644,7 +1644,7 @@ public sealed class Tests
     public void Should_Still_Merge_Writers_On_Sibling_Elements(string kind)
     {
         // The prefix rule must not make independent edits collide.
-        var store = StoreOf(kind, Map.Of("book", Map.Of("items", List.Of("a", "b"))));
+        var store = StoreOf(kind, Map.Of(("book", Map.Of(("items", List.Of("a", "b"))))));
         var book = DataPath.Of("book");
 
         var (start, version) = store.Read(book);
@@ -1664,7 +1664,7 @@ public sealed class Tests
         _.InformationPaths(Map.Of()).Select(p => p.ToString()).Should().Equal("(root)");
         _.ChangedPaths(Map.Of()).Should().BeEmpty();
 
-        var busy = _.DiffObjects(Map.Of("a", 1), Map.Of("a", 2));
+        var busy = _.DiffObjects(Map.Of(("a", 1)), Map.Of(("a", 2)));
         SystemConsistency.CommonPaths(Map.Of(), busy).Should().BeEmpty();
         SystemConsistency.CommonPaths(busy, Map.Of()).Should().BeEmpty();
     }
@@ -1673,9 +1673,9 @@ public sealed class Tests
     public void Should_Read_Several_Keys_At_Once()
     {
         var book = Map.Of(
-            "isbn", "978-1779501127",
-            "title", "Watchmen",
-            "publicationYear", 1987);
+            ("isbn", "978-1779501127"),
+            ("title", "Watchmen"),
+            ("publicationYear", 1987));
 
         ShouldEqual(_.At(book, "title", "isbn"), List.Of("Watchmen", "978-1779501127"));
 
@@ -1686,7 +1686,7 @@ public sealed class Tests
     [Fact]
     public void Should_Yield_Null_For_A_Key_That_Is_Not_There()
     {
-        var book = Map.Of("title", "Watchmen");
+        var book = Map.Of(("title", "Watchmen"));
 
         // The result is always as long as the key list, so it can be zipped back
         // against those keys without the positions drifting.
@@ -1724,7 +1724,7 @@ public sealed class Tests
     [Fact]
     public void Should_Take_Keys_From_A_Collection()
     {
-        var book = Map.Of("isbn", "978-1779501127", "title", "Watchmen");
+        var book = Map.Of(("isbn", "978-1779501127"), ("title", "Watchmen"));
         var wanted = new List<StringOrInt> { "title", "isbn" };
 
         ShouldEqual(_.At(book, wanted), List.Of("Watchmen", "978-1779501127"));
@@ -1736,8 +1736,8 @@ public sealed class Tests
         // Previously this threw: the directory was never created, the method name was
         // a typo, and JsonSerializer wrote the wrapper rather than the data.
         var path = Debug.Dump($"dump-{Guid.NewGuid():N}", Map.Of(
-            "title", "Watchmen",
-            "authorIds", List.Of("alan-moore")));
+            ("title", "Watchmen"),
+            ("authorIds", List.Of("alan-moore"))));
 
         try
         {
@@ -1753,8 +1753,8 @@ public sealed class Tests
     [Fact]
     public void Probe_MergeIntoMissingPath()
     {
-        var previous = Map.Of("book", Map.Of("title", "Watchmen"));
-        var next = Map.Of("book", Map.Of("title", "Watchmen", "items", List.Of(Map.Of("id", "a"))));
+        var previous = Map.Of(("book", Map.Of(("title", "Watchmen"))));
+        var next = Map.Of(("book", Map.Of(("title", "Watchmen"), ("items", List.Of(Map.Of(("id", "a")))))));
         var diff = _.DiffObjects(previous, next);
         var merged = _.Merge(previous, diff);
         ShouldEqual(merged, next);
@@ -1764,21 +1764,21 @@ public sealed class Tests
     public void DiffyLoop()
     {
         var watchmen = Map.Of(
-            "isbn", "978-1779501127",
-            "title", "Watchmen",
-            "publicationYear", 1987,
-            "authorIds", List.Of("alan-moore", "dave-gibbons"));
+            ("isbn", "978-1779501127"),
+            ("title", "Watchmen"),
+            ("publicationYear", 1987),
+            ("authorIds", List.Of("alan-moore", "dave-gibbons")));
         var alan = Map.Of(
-            "name", "Alan Moore",
-            "bookIsbns", List.Of("978-1779501127"));
+            ("name", "Alan Moore"),
+            ("bookIsbns", List.Of("978-1779501127")));
         var dave = Map.Of(
-            "name", "Dave Gibbons",
-            "bookIsbns", List.Of("978-1779501127"));
+            ("name", "Dave Gibbons"),
+            ("bookIsbns", List.Of("978-1779501127")));
         
         var library = Map.Of(
-            "catalog", Map.Of(
-                "booksByIsbn", Map.Of("978-1779501127", watchmen),
-                "authorsById", Map.Of("alan-moore", alan, "dave-gibbons", dave)));
+            ("catalog", Map.Of(
+                ("booksByIsbn", Map.Of(("978-1779501127", watchmen))),
+                ("authorsById", Map.Of(("alan-moore", alan), ("dave-gibbons", dave))))));
 
         var previous = library;
         var next = _.Set(library, 
@@ -1792,21 +1792,21 @@ public sealed class Tests
         var diff1 = _.DiffObjects(previous, next);
 
         ShouldEqual(diff1.As<DataMap>(),
-            Map.Of("catalog", Map.Of(
-                "booksByIsbn", Map.Of(
-                    "978-1779501127", Map.Of(
-                        "publicationYear", 1986)))));
+            Map.Of(("catalog", Map.Of(
+                ("booksByIsbn", Map.Of(
+                    ("978-1779501127", Map.Of(
+                        ("publicationYear", 1986)))))))));
 
         // ...while current changes the title and one author's name.
         var diff2 = _.DiffObjects(previous, current);
 
         ShouldEqual(diff2.As<DataMap>(),
-            Map.Of("catalog", Map.Of(
-                "booksByIsbn", Map.Of(
-                    "978-1779501127", Map.Of(
-                        "title", "The Watchmen")),
-                "authorsById", Map.Of(
-                    "dave-gibbons", Map.Of(
-                        "name", "David Chester Gibbons")))));
+            Map.Of(("catalog", Map.Of(
+                ("booksByIsbn", Map.Of(
+                    ("978-1779501127", Map.Of(
+                        ("title", "The Watchmen"))))),
+                ("authorsById", Map.Of(
+                    ("dave-gibbons", Map.Of(
+                        ("name", "David Chester Gibbons")))))))));
     }
 }

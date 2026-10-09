@@ -67,11 +67,11 @@ public static class Catalog
             var book = _.Get<DataMap>(catalogData, path);
 
             return Map.Of(
-                "bookItemId", _.Get(lending, "bookItemId"),
-                "lendingDate", _.Get(lending, "lendingDate"),
-                "title", _.Get(book, "title"),
-                "isbn", isbn,
-                "authorNames", AuthorNames(catalogData, book));
+                ("bookItemId", _.Get(lending, "bookItemId")),
+                ("lendingDate", _.Get(lending, "lendingDate")),
+                ("title", _.Get(book, "title")),
+                ("isbn", isbn),
+                ("authorNames", AuthorNames(catalogData, book)));
         });
 
     /// Adds a physical item to a book, returning the new catalogue.
@@ -106,9 +106,9 @@ public static class Catalog
             throw new DuplicateBookItemException(id);
 
         var item = Map.Of(
-            "id", id,
-            "libId", _.Get<string>(bookItemInfo, "libId"),
-            "isLent", false);
+            ("id", id),
+            ("libId", _.Get<string>(bookItemInfo, "libId")),
+            ("isLent", false));
 
         return book.SetItem("bookItems", existing.Add(item));
     }
@@ -122,9 +122,9 @@ public static class Catalog
 
     public static DataMap BookInfo(DataMap catalogData, DataMap book) =>
         Map.Of(
-            "title", _.Get(book, "title"),
-            "isbn", _.Get(book, "isbn"),
-            "authorNames", AuthorNames(catalogData, book));
+            ("title", _.Get(book, "title")),
+            ("isbn", _.Get(book, "isbn")),
+            ("authorNames", AuthorNames(catalogData, book)));
 
     public static DataList SearchBooksByTitle(DataMap catalogData, string query)
     {

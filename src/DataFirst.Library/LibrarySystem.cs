@@ -84,7 +84,7 @@ public sealed class LibrarySystem(IAggregateStore store)
         // user-management map, so the collection is lifted into that shape and the
         // result taken back out.
         var updated = _.Get<DataMap>(
-            UserManagement.AddMember(Map.Of("members", members), member), "members");
+            UserManagement.AddMember(Map.Of(("members", members)), member), "members");
 
         return Commit(Aggregates.Members, version, members, updated);
     }

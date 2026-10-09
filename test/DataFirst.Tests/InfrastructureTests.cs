@@ -56,7 +56,7 @@ public sealed class PasswordTests
         record.Keys.Should().Equal("salt", "hash", "iterations");
         Convert.FromBase64String(_.Get<string>(record, "salt")).Should().HaveCount(16);
         Convert.FromBase64String(_.Get<string>(record, "hash")).Should().HaveCount(32);
-        Validation.Validate(Schemas.Member, Map.Of("email", "a@b.co", "password", record)).IsValid().Should().BeTrue();
+        Validation.Validate(Schemas.Member, Map.Of(("email", "a@b.co"), ("password", record))).IsValid().Should().BeTrue();
     }
 
     [Fact]
@@ -163,11 +163,11 @@ public sealed class DbReadTests
             "SELECT i, r, s, n, b FROM t");
 
         rows.ShouldEqual(List.Of(Map.Of(
-            "i", 42,
-            "r", 1.5,
-            "s", "hello",
-            "n", DataNull.Instance,
-            "b", Convert.ToBase64String([0xDE, 0xAD, 0xBE, 0xEF]))));
+            ("i", 42),
+            ("r", 1.5),
+            ("s", "hello"),
+            ("n", DataNull.Instance),
+            ("b", Convert.ToBase64String([0xDE, 0xAD, 0xBE, 0xEF])))));
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public sealed class DbReadTests
                 using var reader = select.ExecuteReader();
 
                 var expected = DataList.Create(rows.Select(r => (DataValue)Map.Of(
-                    "i", (long)r.i, "s", r.isNull ? DataNull.Instance : (DataValue)r.s)).ToList());
+                    ("i", (long)r.i), ("s", r.isNull ? DataNull.Instance : (DataValue)r.s))).ToList());
 
                 return Db.ReadFrom(reader).Equals(expected);
             });
@@ -323,7 +323,7 @@ public sealed class DebugDumpTests : IDisposable
     [Fact]
     public void Dump_writes_the_json_and_returns_where()
     {
-        var path = Debug.Dump("spec-dump", Map.Of("a", List.Of(1, 2)));
+        var path = Debug.Dump("spec-dump", Map.Of(("a", List.Of(1, 2))));
         written.Add(path);
 
         File.ReadAllText(path).Should().Be("""{"a":[1,2]}""");

@@ -84,7 +84,7 @@ public sealed class DataMapProperties
     [Fact]
     public void Missing_key_throws_and_names_the_keys_present()
     {
-        var act = () => Map.Of("a", 1, "b", 2)["zzz"];
+        var act = () => Map.Of(("a", 1), ("b", 2))["zzz"];
         act.Should().Throw<KeyNotFoundException>().WithMessage("*zzz*a*b*");
     }
 
@@ -99,15 +99,15 @@ public sealed class DataMapProperties
     [Fact]
     public void A_map_is_never_equal_to_null_or_another_type()
     {
-        Map.Of("a", 1).Equals(null).Should().BeFalse();
-        Map.Of("a", 1).Equals((object)"a").Should().BeFalse();
+        Map.Of(("a", 1)).Equals(null).Should().BeFalse();
+        Map.Of(("a", 1)).Equals((object)"a").Should().BeFalse();
     }
 
     [Fact]
     public void Maps_of_different_sizes_or_keys_differ()
     {
-        Map.Of("a", 1).Equals(Map.Of("a", 1, "b", 2)).Should().BeFalse();
-        Map.Of("a", 1).Equals(Map.Of("b", 1)).Should().BeFalse();
+        Map.Of(("a", 1)).Equals(Map.Of(("a", 1), ("b", 2))).Should().BeFalse();
+        Map.Of(("a", 1)).Equals(Map.Of(("b", 1))).Should().BeFalse();
     }
 }
 
@@ -315,7 +315,7 @@ public sealed class DataValueTests
         ((DataValue)5L).Unwrap().Should().Be(5L);
         ((DataValue)1.5).Unwrap().Should().Be(1.5);
         ((DataValue)true).Unwrap().Should().Be(true);
-        var map = Map.Of("a", 1);
+        var map = Map.Of(("a", 1));
         ReferenceEquals(((DataValue)map).Unwrap(), map).Should().BeTrue();
         var list = List.Of(1);
         ReferenceEquals(((DataValue)list).Unwrap(), list).Should().BeTrue();
@@ -336,7 +336,7 @@ public sealed class DataValueTests
         var wrong = () => ((DataValue)7L).As<string>();
         wrong.Should().Throw<InvalidOperationException>().WithMessage("*String*number (long)*");
 
-        var map = () => ((DataValue)Map.Of("a", 1)).As<DataList>();
+        var map = () => ((DataValue)Map.Of(("a", 1))).As<DataList>();
         map.Should().Throw<InvalidOperationException>().WithMessage("*map[1]*");
     }
 
@@ -348,7 +348,7 @@ public sealed class DataValueTests
         ((DataValue)1L).Describe().Should().Be("number (long)");
         ((DataValue)1.5).Describe().Should().Be("number (double)");
         ((DataValue)true).Describe().Should().Be("bool");
-        ((DataValue)Map.Of("a", 1, "b", 2)).Describe().Should().Be("map[2]");
+        ((DataValue)Map.Of(("a", 1), ("b", 2))).Describe().Should().Be("map[2]");
         ((DataValue)List.Of(1, 2, 3)).Describe().Should().Be("list[3]");
     }
 
@@ -419,7 +419,7 @@ public sealed class DataJsonTests
     [Fact]
     public void Composites_nest_without_whitespace()
     {
-        DataJson.Serialize(Map.Of("a", List.Of(1, Map.Of("b", DataNull.Instance)), "c", DataMap.Empty))
+        DataJson.Serialize(Map.Of(("a", List.Of(1, Map.Of(("b", DataNull.Instance)))), ("c", DataMap.Empty)))
             .Should().Be("""{"a":[1,{"b":null}],"c":{}}""");
     }
 

@@ -159,7 +159,7 @@ public sealed class GetSetProperties
     [Fact]
     public void Get_fails_with_a_message_naming_the_mismatch()
     {
-        var map = Map.Of("a", 1);
+        var map = Map.Of(("a", 1));
         var list = List.Of(1);
 
         new Action(() => _.Get(map, 0)).Should().Throw<InvalidOperationException>().WithMessage("*Cannot index a map*");
@@ -173,15 +173,15 @@ public sealed class GetSetProperties
     [Fact]
     public void Typed_Get_names_the_actual_type_on_a_mismatch()
     {
-        _.Get<long>(Map.Of("year", 1987), "year").Should().Be(1987);
-        new Action(() => _.Get<string>(Map.Of("year", 1987), "year"))
+        _.Get<long>(Map.Of(("year", 1987)), "year").Should().Be(1987);
+        new Action(() => _.Get<string>(Map.Of(("year", 1987)), "year"))
             .Should().Throw<InvalidOperationException>().WithMessage("*number (long)*");
     }
 
     [Fact]
     public void ContainsKey_is_false_rather_than_throwing_for_odd_shapes()
     {
-        var map = Map.Of("a", List.Of(1, 2), "leaf", 5);
+        var map = Map.Of(("a", List.Of(1, 2)), ("leaf", 5));
 
         _.ContainsKey(map, Array.Empty<StringOrInt>()).Should().BeFalse();
         _.ContainsKey(map, ["leaf", "deeper"]).Should().BeFalse();
@@ -198,45 +198,45 @@ public sealed class GetSetProperties
     [Fact]
     public void Set_rejects_a_key_of_the_wrong_kind_for_the_container()
     {
-        new Action(() => _.Set(Map.Of("a", 1), 0, 1)).Should().Throw<InvalidOperationException>().WithMessage("*map*");
+        new Action(() => _.Set(Map.Of(("a", 1)), 0, 1)).Should().Throw<InvalidOperationException>().WithMessage("*map*");
         new Action(() => _.Set(List.Of(1), "x", 1)).Should().Throw<InvalidOperationException>().WithMessage("*list*");
         new Action(() => _.Set(DataNull.Instance, "x", 1)).Should().Throw<InvalidOperationException>();
-        new Action(() => _.Set(Map.Of("leaf", 5), ["leaf", "deeper"], 1)).Should().Throw<InvalidOperationException>();
+        new Action(() => _.Set(Map.Of(("leaf", 5)), ["leaf", "deeper"], 1)).Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
     public void Set_treats_a_null_on_the_way_down_as_missing()
     {
-        _.Set(Map.Of("a", DataNull.Instance), ["a", "b"], 1)
-            .ShouldEqual(Map.Of("a", Map.Of("b", 1)));
+        _.Set(Map.Of(("a", DataNull.Instance)), ["a", "b"], 1)
+            .ShouldEqual(Map.Of(("a", Map.Of(("b", 1)))));
     }
 
     [Fact]
     public void Set_creates_a_list_when_the_next_step_is_an_index()
     {
         _.Set(DataMap.Empty, ["items", 1, "id"], "x")
-            .ShouldEqual(Map.Of("items", List.Of(DataNull.Instance, Map.Of("id", "x"))));
+            .ShouldEqual(Map.Of(("items", List.Of(DataNull.Instance, Map.Of(("id", "x"))))));
     }
 
     [Fact]
     public void Update_of_a_missing_key_throws()
     {
-        new Action(() => _.Update(Map.Of("a", 1), "zzz", v => v)).Should().Throw<KeyNotFoundException>();
+        new Action(() => _.Update(Map.Of(("a", 1)), "zzz", v => v)).Should().Throw<KeyNotFoundException>();
     }
 
     [Fact]
     public void Update_works_along_a_path()
     {
-        var map = Map.Of("book", Map.Of("year", 1987));
+        var map = Map.Of(("book", Map.Of(("year", 1987))));
         _.Update(map, ["book", "year"], y => y.As<long>() + 1)
-            .ShouldEqual(Map.Of("book", Map.Of("year", 1988)));
+            .ShouldEqual(Map.Of(("book", Map.Of(("year", 1988)))));
     }
 
     [Fact]
     public void At_with_no_keys_is_empty()
     {
-        _.At(Map.Of("a", 1)).ShouldEqual(DataList.Empty);
-        _.At(Map.Of("a", 1), Array.Empty<DataPath>()).ShouldEqual(DataList.Empty);
+        _.At(Map.Of(("a", 1))).ShouldEqual(DataList.Empty);
+        _.At(Map.Of(("a", 1)), Array.Empty<DataPath>()).ShouldEqual(DataList.Empty);
     }
 
     [Fact]
@@ -244,8 +244,8 @@ public sealed class GetSetProperties
     {
         var title = Getter.Create<string>("title");
         var firstAuthor = Getter.Create<string>(["authors", 0, "name"]);
-        var a = Map.Of("title", "A", "authors", List.Of(Map.Of("name", "x")));
-        var b = Map.Of("title", "B", "authors", List.Of(Map.Of("name", "y")));
+        var a = Map.Of(("title", "A"), ("authors", List.Of(Map.Of(("name", "x")))));
+        var b = Map.Of(("title", "B"), ("authors", List.Of(Map.Of(("name", "y")))));
 
         title.Get(a).Should().Be("A");
         title.Get(b).Should().Be("B");
@@ -380,7 +380,7 @@ public sealed class GroupingProperties
         Gen.Choose(0, 8).SelectMany(n =>
             (from key in Gens.Key from word in Gens.Word from num in Gen.Choose(0, 100) select (key, word, num)).ArrayOf(n).Select(rows =>
                 DataList.Create(rows.Select((r, i) => (DataValue)Map.Of(
-                    "id", r.Item1, "name", r.Item2, "n", r.Item3, "seq", i)).ToList())));
+                    ("id", r.Item1), ("name", r.Item2), ("n", r.Item3), ("seq", i))).ToList())));
 
     [Property]
     public Property GroupBy_partitions_the_rows() =>
@@ -449,22 +449,22 @@ public sealed class GroupingProperties
     [Fact]
     public void Unwind_of_an_empty_list_is_empty_and_of_a_non_list_throws()
     {
-        _.Unwind(Map.Of("a", 1, "items", DataList.Empty), "items").ShouldEqual(DataList.Empty);
-        new Action(() => _.Unwind(Map.Of("items", 5), "items")).Should().Throw<InvalidOperationException>();
-        new Action(() => _.Unwind(Map.Of("a", 1), "items")).Should().Throw<KeyNotFoundException>();
+        _.Unwind(Map.Of(("a", 1), ("items", DataList.Empty)), "items").ShouldEqual(DataList.Empty);
+        new Action(() => _.Unwind(Map.Of(("items", 5)), "items")).Should().Throw<InvalidOperationException>();
+        new Action(() => _.Unwind(Map.Of(("a", 1)), "items")).Should().Throw<KeyNotFoundException>();
     }
 
     [Fact]
     public void AggregateFields_collapses_rows_sharing_an_id()
     {
         var rows = List.Of(
-            Map.Of("isbn", "1", "title", "T", "author", "a"),
-            Map.Of("isbn", "1", "title", "T", "author", "b"),
-            Map.Of("isbn", "2", "title", "U", "author", "c"));
+            Map.Of(("isbn", "1"), ("title", "T"), ("author", "a")),
+            Map.Of(("isbn", "1"), ("title", "T"), ("author", "b")),
+            Map.Of(("isbn", "2"), ("title", "U"), ("author", "c")));
 
         _.AggregateFields(rows, "isbn", "author", "authors").ShouldEqual(List.Of(
-            Map.Of("isbn", "1", "title", "T", "authors", List.Of("a", "b")),
-            Map.Of("isbn", "2", "title", "U", "authors", List.Of("c"))));
+            Map.Of(("isbn", "1"), ("title", "T"), ("authors", List.Of("a", "b"))),
+            Map.Of(("isbn", "2"), ("title", "U"), ("authors", List.Of("c")))));
     }
 
     [Fact]
@@ -477,8 +477,8 @@ public sealed class GroupingProperties
     [Fact]
     public void KeyBy_needs_a_string_key_field()
     {
-        new Action(() => _.KeyBy(List.Of(Map.Of("id", 1)), "id")).Should().Throw<InvalidOperationException>();
-        new Action(() => _.KeyBy(List.Of(Map.Of("x", 1)), "id")).Should().Throw<KeyNotFoundException>();
+        new Action(() => _.KeyBy(List.Of(Map.Of(("id", 1))), "id")).Should().Throw<InvalidOperationException>();
+        new Action(() => _.KeyBy(List.Of(Map.Of(("x", 1))), "id")).Should().Throw<KeyNotFoundException>();
     }
 }
 
@@ -487,7 +487,7 @@ public sealed class LiteralTests
     [Fact]
     public void Map_Of_pairs_up_keys_and_values_in_order()
     {
-        var map = Map.Of("b", 1, "a", 2);
+        var map = Map.Of(("b", 1), ("a", 2));
         map.Keys.Should().Equal("b", "a");
         map["a"].Should().Be((DataValue)2L);
     }
@@ -495,19 +495,7 @@ public sealed class LiteralTests
     [Fact]
     public void Map_Of_with_a_repeated_key_keeps_the_last_value()
     {
-        Map.Of("a", 1, "a", 2).ShouldEqual(Map.Of("a", 2));
-    }
-
-    [Fact]
-    public void Map_Of_rejects_an_odd_number_of_arguments()
-    {
-        new Action(() => Map.Of("a")).Should().Throw<ArgumentException>().WithMessage("*even*");
-    }
-
-    [Fact]
-    public void Map_Of_rejects_a_non_string_key_and_says_where()
-    {
-        new Action(() => Map.Of("a", 1, 2, 3)).Should().Throw<ArgumentException>().WithMessage("*position 2*");
+        Map.Of(("a", 1), ("a", 2)).ShouldEqual(Map.Of(("a", 2)));
     }
 
     [Fact]
@@ -594,30 +582,30 @@ public sealed class DiffProperties
     [Fact]
     public void A_key_removed_diffs_to_null_and_an_added_key_to_its_value()
     {
-        _.DiffObjects(Map.Of("a", 1, "b", 2), Map.Of("a", 1, "c", 3))
-            .ShouldEqual(Map.Of("b", DataNull.Instance, "c", 3));
+        _.DiffObjects(Map.Of(("a", 1), ("b", 2)), Map.Of(("a", 1), ("c", 3)))
+            .ShouldEqual(Map.Of(("b", DataNull.Instance), ("c", 3)));
     }
 
     [Fact]
     public void List_indices_become_string_keys_and_only_changed_slots_appear()
     {
         _.DiffObjects(List.Of("a", "b", "c"), List.Of("a", "X", "c"))
-            .ShouldEqual(Map.Of("1", "X"));
+            .ShouldEqual(Map.Of(("1", "X")));
     }
 
     [Fact]
     public void A_list_that_grew_reports_only_the_new_slots()
     {
         _.DiffObjects(List.Of("a"), List.Of("a", "b", "c"))
-            .ShouldEqual(Map.Of("1", "b", "2", "c"));
+            .ShouldEqual(Map.Of(("1", "b"), ("2", "c")));
     }
 
     [Fact]
     public void A_composite_replaced_by_a_leaf_is_a_change_to_that_leaf()
     {
-        (_.Diff(Map.Of("a", 1), "now a string") is Changed(var toLeaf) && toLeaf.Equals((DataValue)"now a string"))
+        (_.Diff(Map.Of(("a", 1)), "now a string") is Changed(var toLeaf) && toLeaf.Equals((DataValue)"now a string"))
             .Should().BeTrue();
-        (_.Diff("was a string", Map.Of("a", 1)) is Changed(var toMap) && toMap.Equals((DataValue)Map.Of("a", 1)))
+        (_.Diff("was a string", Map.Of(("a", 1))) is Changed(var toMap) && toMap.Equals((DataValue)Map.Of(("a", 1))))
             .Should().BeTrue();
     }
 
@@ -626,7 +614,7 @@ public sealed class DiffProperties
     {
         // Regression: Merge walked InformationPaths, which reports the root of an empty
         // diff, and wrote the empty diff over the whole target.
-        var target = Map.Of("title", "Watchmen", "items", List.Of(1, 2));
+        var target = Map.Of(("title", "Watchmen"), ("items", List.Of(1, 2)));
         _.Merge(target, DataMap.Empty).ShouldEqual(target);
         _.Merge((DataValue)target, DataMap.Empty).As<DataMap>().ShouldEqual(target);
         _.Merge((DataValue)DataNull.Instance, DataMap.Empty).Equals((DataValue)DataNull.Instance).Should().BeTrue();
@@ -635,7 +623,7 @@ public sealed class DiffProperties
     [Fact]
     public void Merge_into_a_typed_map_returns_a_map()
     {
-        _.Merge(Map.Of("a", 1), Map.Of("a", 2)).ShouldEqual(Map.Of("a", 2));
+        _.Merge(Map.Of(("a", 1)), Map.Of(("a", 2))).ShouldEqual(Map.Of(("a", 2)));
     }
 }
 
@@ -692,7 +680,7 @@ public sealed class InformationPathProperties
     public void Paths_run_from_the_root_to_each_leaf_including_empty_composites()
     {
         var paths = _.InformationPaths(Map.Of(
-            "a", 1, "b", Map.Of("c", List.Of("x", DataMap.Empty)), "d", DataList.Empty));
+            ("a", 1), ("b", Map.Of(("c", List.Of("x", DataMap.Empty)))), ("d", DataList.Empty)));
 
         paths.Should().Equal(
             DataPath.Of("a"),

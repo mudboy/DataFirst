@@ -26,9 +26,9 @@ public static class StoreHarness
     public static readonly DataPath Aggregate = Aggregates.Book("b1");
 
     public static readonly DataMap Initial = Map.Of(
-        "catalog", Map.Of("booksByIsbn", Map.Of(
-            "b1", Map.Of("a", 0, "b", 0, "c", 0),
-            "b2", Map.Of("a", 0))));
+        ("catalog", Map.Of(("booksByIsbn", Map.Of(
+            ("b1", Map.Of(("a", 0), ("b", 0), ("c", 0))),
+            ("b2", Map.Of(("a", 0))))))));
 
     public static readonly IReadOnlyDictionary<string, Func<IAggregateStore>> Stores =
         new Dictionary<string, Func<IAggregateStore>>
@@ -148,7 +148,7 @@ public sealed class StoreContractTests
                 var final = store.Commit(StoreHarness.Aggregate, start.Version, second);
 
                 return final.Version == 2
-                       && final.Value.Equals((DataValue)Map.Of("a", 1, "b", 2, "c", 0));
+                       && final.Value.Equals((DataValue)Map.Of(("a", 1), ("b", 2), ("c", 0)));
             }));
 
     [Theory, MemberData(nameof(Kinds))]
@@ -199,10 +199,10 @@ public sealed class StoreContractTests
         read.Version.Should().Be(0);
         read.Value.Equals((DataValue)DataNull.Instance).Should().BeTrue();
 
-        var created = store.Commit(absent, 0, _.DiffObjects(DataNull.Instance, Map.Of("title", "New")));
+        var created = store.Commit(absent, 0, _.DiffObjects(DataNull.Instance, Map.Of(("title", "New"))));
         created.Version.Should().Be(1);
-        created.Value.Equals((DataValue)Map.Of("title", "New")).Should().BeTrue();
-        store.Read(absent).Value.Equals((DataValue)Map.Of("title", "New")).Should().BeTrue();
+        created.Value.Equals((DataValue)Map.Of(("title", "New"))).Should().BeTrue();
+        store.Read(absent).Value.Equals((DataValue)Map.Of(("title", "New"))).Should().BeTrue();
     }
 
     [Theory, MemberData(nameof(Kinds))]
@@ -395,7 +395,7 @@ public sealed class SnapshotStoreHistoryTests
 [Properties(Arbitrary = [typeof(Arbs)])]
 public sealed class SystemConsistencyProperties
 {
-    private static readonly DataMap Base = Map.Of("a", 0, "b", 0, "c", 0, "nested", Map.Of("x", 0, "y", 0));
+    private static readonly DataMap Base = Map.Of(("a", 0), ("b", 0), ("c", 0), ("nested", Map.Of(("x", 0), ("y", 0))));
 
     private static readonly Gen<DataPath> BasePath =
         Gen.Elements(
@@ -482,8 +482,8 @@ public sealed class SystemConsistencyProperties
 public sealed class SystemStateTests
 {
     private static readonly DataMap Start = Map.Of(
-        "counters", Map.Of("a", 0, "b", 0),
-        "other", Map.Of("x", 0));
+        ("counters", Map.Of(("a", 0), ("b", 0))),
+        ("other", Map.Of(("x", 0))));
 
     [Fact]
     public void Get_returns_the_initial_data_and_Update_applies_a_mutation()
@@ -513,7 +513,7 @@ public sealed class SystemStateTests
     {
         var state = new SystemState(Start);
 
-        state.Read(DataPath.Of("counters")).Equals((DataValue)Map.Of("a", 0, "b", 0)).Should().BeTrue();
+        state.Read(DataPath.Of("counters")).Equals((DataValue)Map.Of(("a", 0), ("b", 0))).Should().BeTrue();
         state.Read(DataPath.Of("nope", "deeper")).Equals((DataValue)DataNull.Instance).Should().BeTrue();
         state.Read(DataPath.Root).Equals((DataValue)Start).Should().BeTrue();
     }
@@ -576,7 +576,7 @@ public sealed class SystemStateTests
         var state = new SystemState(Start);
         var path = DataPath.Of("fresh", "thing");
 
-        var result = state.Commit(path, DataNull.Instance, Map.Of("v", 1));
+        var result = state.Commit(path, DataNull.Instance, Map.Of(("v", 1)));
 
         _.Get(result, ["fresh", "thing", "v"]).Equals((DataValue)1L).Should().BeTrue();
     }
@@ -585,7 +585,7 @@ public sealed class SystemStateTests
     public void Parallel_updates_to_different_counters_are_all_kept()
     {
         var keys = Enumerable.Range(0, 24).Select(i => $"k{i}").ToArray();
-        var state = new SystemState(Map.Of("counters", DataMap.Empty));
+        var state = new SystemState(Map.Of(("counters", DataMap.Empty)));
 
         Parallel.ForEach(keys, new ParallelOptions { MaxDegreeOfParallelism = 8 }, key =>
             state.Update(data => _.Set(data, ["counters", key], 1)));

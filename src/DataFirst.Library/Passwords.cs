@@ -25,9 +25,9 @@ public static class Passwords
         var hash = Derive(password, salt, iterations);
 
         return Map.Of(
-            "salt", Convert.ToBase64String(salt),
-            "hash", Convert.ToBase64String(hash),
-            "iterations", (long)iterations);
+            ("salt", Convert.ToBase64String(salt)),
+            ("hash", Convert.ToBase64String(hash)),
+            ("iterations", (long)iterations));
     }
 
     /// Compares in constant time, so a wrong password takes as long as a right one.

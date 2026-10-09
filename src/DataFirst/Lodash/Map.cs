@@ -1,26 +1,15 @@
 namespace DataFirst.Lodash;
 
-/// Literal syntax for maps: Map.Of("title", "Watchmen", "publicationYear", 1987).
+/// Literal syntax for maps: Map.Of(("title", "Watchmen"), ("publicationYear", 1987)).
 public static class Map
 {
-    public static DataMap Of(params DataValue[] keysAndValues)
+    public static DataMap Of(params (string Key, DataValue Value)[] entries)
     {
-        ArgumentNullException.ThrowIfNull(keysAndValues);
-
-        if (keysAndValues.Length % 2 != 0)
-            throw new ArgumentException(
-                "must be an even number of values (alternating key and value)", nameof(keysAndValues));
+        ArgumentNullException.ThrowIfNull(entries);
 
         var builder = DataMap.CreateBuilder();
-        for (var i = 0; i < keysAndValues.Length; i += 2)
-        {
-            if (keysAndValues[i] is not string key)
-                throw new ArgumentException(
-                    $"key at position {i} must be a string, but was {keysAndValues[i].Describe()}",
-                    nameof(keysAndValues));
-
-            builder.Set(key, keysAndValues[i + 1]);
-        }
+        foreach (var (key, value) in entries)
+            builder.Set(key, value);
 
         return builder.ToDataMap();
     }
